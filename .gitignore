@@ -12,4 +12,5 @@
 *.p7c
 *.profile
 signing/
-
+/watch-deploy.local.psd1
+/.local-tools/

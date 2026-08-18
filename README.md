@@ -37,3 +37,13 @@ third-party runtime dependencies.
 
 Signing certificates, profiles, IDE state, build outputs and local SDK paths
 are excluded from version control.
+
+## Deployment
+
+The repeatable build, signing and Watch 4 installation workflow is documented
+in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). On a configured workstation the
+complete test/build/deploy/smoke cycle is one command:
+
+```powershell
+.\scripts\deploy-watch.ps1
+```

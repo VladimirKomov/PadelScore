@@ -11,6 +11,12 @@ Americano Fixed Total Points. Every mode supports persistent state and Undo.
 The watch UI also provides serve tracking, confirmations, round history and
 large tap zones designed for a circular display.
 
+## User guide
+
+The Russian watch UI guide covers every game mode, match setting, scoring
+control, menu item, Americano history and state recovery workflow:
+[`docs/USER_GUIDE.md`](docs/USER_GUIDE.md).
+
 ## Local verification
 
 ```powershell

@@ -1,0 +1,189 @@
+<div class="app">
+  <div if="{{showHome}}" class="screen">
+    <list class="scroll-list">
+      <list-item class="heading-item">
+        <div class="heading-wrap">
+          <text class="brand">{{ $t('strings.appName') }}</text>
+          <text class="page-title">{{ $t('strings.chooseMode') }}</text>
+        </div>
+      </list-item>
+      <list-item class="mode-item"><button class="mode-button blue-one" onclick="chooseClassic">{{ $t('strings.classic') }}</button></list-item>
+      <list-item class="mode-item"><button class="mode-button blue-two" onclick="chooseSingleSet">{{ $t('strings.singleSet') }}</button></list-item>
+      <list-item class="mode-item"><button class="mode-button violet-one" onclick="chooseTieBreak">{{ $t('strings.tieBreak') }}</button></list-item>
+      <list-item class="mode-item"><button class="mode-button violet-two" onclick="chooseSuperTieBreak">{{ $t('strings.superTieBreak') }}</button></list-item>
+      <list-item class="mode-item"><button class="mode-button amber-one" onclick="chooseRace">{{ $t('strings.raceToN') }}</button></list-item>
+      <list-item class="mode-item"><button class="mode-button orange-one" onclick="chooseAmericano">{{ $t('strings.americano') }}</button></list-item>
+      <list-item class="repeat-item"><button class="quiet-button" onclick="repeatLast">{{ $t('strings.repeatLast') }}</button></list-item>
+    </list>
+  </div>
+
+  <div if="{{showSettings}}" class="screen">
+    <list class="scroll-list settings-list">
+      <list-item class="heading-item">
+        <div class="heading-wrap">
+          <text class="page-title settings-heading">{{ $t('strings.settings') }}</text>
+          <text class="mode-caption">{{settingsTitle}}</text>
+        </div>
+      </list-item>
+
+      <list-item if="{{showAmericanoSettings}}" class="preset-item">
+        <div class="preset-row">
+          <button class="preset" onclick="preset16">16</button>
+          <button class="preset" onclick="preset20">20</button>
+          <button class="preset" onclick="preset21">21</button>
+          <button class="preset" onclick="preset24">24</button>
+          <button class="preset" onclick="preset28">28</button>
+          <button class="preset" onclick="preset32">32</button>
+        </div>
+      </list-item>
+
+      <list-item if="{{showTargetSettings}}" class="control-item">
+        <div class="number-control">
+          <text class="control-label">{{ $t('strings.target') }}</text>
+          <div class="number-row">
+            <button class="round-control" onclick="targetDown">−</button>
+            <text class="number-value">{{target}}</text>
+            <button class="round-control" onclick="targetUp">+</button>
+          </div>
+        </div>
+      </list-item>
+
+      <list-item if="{{showClassicSettings}}" class="control-item">
+        <div class="number-control">
+          <text class="control-label">{{ $t('strings.gamesPerSet') }}</text>
+          <div class="number-row">
+            <button class="round-control" onclick="gamesDown">−</button>
+            <text class="number-value">{{gamesPerSet}}</text>
+            <button class="round-control" onclick="gamesUp">+</button>
+          </div>
+        </div>
+      </list-item>
+
+      <list-item if="{{showSetsSetting}}" class="control-item">
+        <div class="number-control">
+          <text class="control-label">{{ $t('strings.setsToWin') }}</text>
+          <div class="number-row">
+            <button class="round-control" onclick="setsDown">−</button>
+            <text class="number-value">{{setsToWin}}</text>
+            <button class="round-control" onclick="setsUp">+</button>
+          </div>
+        </div>
+      </list-item>
+
+      <list-item if="{{showClassicSettings}}" class="toggle-item">
+        <div class="toggle-row">
+          <text class="toggle-label">{{ $t('strings.enableTieBreak') }}</text>
+          <switch checked="{{tieBreakEnabled}}" onchange="toggleTieBreak"></switch>
+        </div>
+      </list-item>
+
+      <list-item if="{{showTieAtSetting}}" class="control-item">
+        <div class="number-control">
+          <text class="control-label">{{ $t('strings.tieBreakAt') }}</text>
+          <div class="number-row">
+            <button class="round-control" onclick="tieAtDown">−</button>
+            <text class="number-value">{{tieBreakAt}}</text>
+            <button class="round-control" onclick="tieAtUp">+</button>
+          </div>
+        </div>
+      </list-item>
+
+      <list-item if="{{showClassicSettings}}" class="toggle-item">
+        <div class="toggle-row">
+          <text class="toggle-label">{{ $t('strings.goldenPoint') }}</text>
+          <switch checked="{{goldenPoint}}" onchange="toggleGolden"></switch>
+        </div>
+      </list-item>
+
+      <list-item if="{{showWinByTwoSetting}}" class="toggle-item">
+        <div class="toggle-row">
+          <text class="toggle-label">{{ $t('strings.winByTwo') }}</text>
+          <switch checked="{{winByTwo}}" onchange="toggleWinByTwo"></switch>
+        </div>
+      </list-item>
+
+      <list-item if="{{showAmericanoSettings}}" class="toggle-item">
+        <div class="toggle-row">
+          <text class="toggle-label">{{ $t('strings.trackServe') }}</text>
+          <switch checked="{{trackServe}}" onchange="toggleTrackServe"></switch>
+        </div>
+      </list-item>
+
+      <list-item if="{{showServeSetting}}" class="control-item">
+        <div class="number-control">
+          <text class="control-label">{{ $t('strings.serveEvery') }}</text>
+          <div class="number-row">
+            <button class="round-control" onclick="serveDown">−</button>
+            <text class="number-value">{{serveEvery}}</text>
+            <button class="round-control" onclick="serveUp">+</button>
+          </div>
+        </div>
+      </list-item>
+
+      <list-item if="{{showServeSetting}}" class="toggle-item">
+        <div class="toggle-row">
+          <text class="toggle-label">{{ $t('strings.startingServer') }}</text>
+          <switch checked="{{startingServerA}}" onchange="toggleStartingServer"></switch>
+        </div>
+      </list-item>
+
+      <list-item class="action-item"><button class="start-button" onclick="startSelectedMode">{{ $t('strings.start') }}</button></list-item>
+      <list-item class="bottom-item"><button class="quiet-button" onclick="settingsBack">{{ $t('strings.back') }}</button></list-item>
+    </list>
+  </div>
+
+  <div if="{{showMatch}}" class="screen match-screen">
+    <div class="match-header">
+      <button class="icon-button" onclick="requestHome">‹</button>
+      <div class="match-title-wrap" onclick="openHistory">
+        <text class="match-title">{{modeTitle}}</text>
+        <text if="{{hasHistory}}" class="round-label">{{ $t('strings.round') }} {{roundNumber}} · {{ $t('strings.historyHint') }}</text>
+      </div>
+      <button class="icon-button dots" onclick="showMenu">•••</button>
+    </div>
+
+    <div class="score-card team-a {{completedClass}}" onclick="scoreA">
+      <text class="team-name team-a-name">{{ $t('strings.teamA') }}</text>
+      <text class="score-value">{{scoreAValue}}</text>
+    </div>
+
+    <div class="match-center">
+      <text if="{{showGames}}" class="detail-line">{{ $t('strings.setsShort') }} {{setsA}}:{{setsB}} · {{ $t('strings.gamesShort') }} {{gamesA}}:{{gamesB}}</text>
+      <text if="{{showRemaining}}" class="detail-line">{{playedPoints}} {{ $t('strings.played') }} · {{remainingPoints}} {{ $t('strings.left') }} · {{progressPercent}}%</text>
+      <text if="{{showServer}}" class="server-line" onclick="changeServer">{{ $t('strings.serve') }} · TEAM {{currentServer}}</text>
+      <text class="status-line {{statusClass}}">{{statusText}}</text>
+    </div>
+
+    <div class="score-card team-b {{completedClass}}" onclick="scoreB">
+      <text class="team-name team-b-name">{{ $t('strings.teamB') }}</text>
+      <text class="score-value">{{scoreBValue}}</text>
+    </div>
+
+    <div class="footer-row">
+      <button class="undo-button" disabled="{{undoDisabled}}" onclick="undo">{{ $t('strings.undo') }}</button>
+      <button if="{{showNextRound}}" class="finish-button" onclick="nextRound">{{ $t('strings.nextRound') }}</button>
+      <button if="{{showRepeat}}" class="finish-button" onclick="repeatLast">{{ $t('strings.repeat') }}</button>
+    </div>
+  </div>
+
+  <div if="{{showHistory}}" class="screen">
+    <div class="history-header">
+      <text class="page-title">{{ $t('strings.history') }}</text>
+      <text class="session-total">{{ $t('strings.session') }} · {{sessionPointsA}}:{{sessionPointsB}}</text>
+    </div>
+    <list class="history-list">
+      <list-item if="{{noRounds}}" class="empty-item"><text class="empty-text">{{ $t('strings.noRounds') }}</text></list-item>
+      <list-item for="{{rounds}}" tid="roundNumber" class="round-item">
+        <div class="round-row">
+          <text class="round-number">#{{$item.roundNumber}}</text>
+          <text class="round-score">{{$item.teamA}} : {{$item.teamB}}</text>
+          <text class="round-winner">{{$item.result}}</text>
+        </div>
+      </list-item>
+    </list>
+    <div class="history-actions">
+      <button class="quiet-button half-button" onclick="historyBack">{{ $t('strings.back') }}</button>
+      <button class="danger-button half-button" onclick="clearSession">{{ $t('strings.clearSession') }}</button>
+    </div>
+  </div>
+</div>

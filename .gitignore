@@ -1,0 +1,15 @@
+/node_modules
+/oh_modules
+/local.properties
+/.idea
+/.hvigor
+**/build
+**/.test
+*.p12
+*.cer
+*.pem
+*.p7b
+*.p7c
+*.profile
+signing/
+

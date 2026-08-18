@@ -1,0 +1,14 @@
+{
+  "string": [
+    { "name": "module_desc", "value": "Offline padel scoring" },
+    { "name": "entry_ability_desc", "value": "PadelScore" },
+    { "name": "entry_ability_label", "value": "PadelScore" },
+    { "name": "team_a", "value": "TEAM A" },
+    { "name": "team_b", "value": "TEAM B" },
+    { "name": "undo", "value": "UNDO" },
+    { "name": "new_match", "value": "NEW MATCH" },
+    { "name": "remaining", "value": "LEFT" },
+    { "name": "server", "value": "SERVE" }
+  ]
+}
+

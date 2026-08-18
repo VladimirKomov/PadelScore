@@ -1,0 +1,9 @@
+{
+  "color": [
+    { "name": "start_window_background", "value": "#080A0E" },
+    { "name": "background", "value": "#080A0E" },
+    { "name": "team_a", "value": "#41D9FF" },
+    { "name": "team_b", "value": "#FFCB45" }
+  ]
+}
+

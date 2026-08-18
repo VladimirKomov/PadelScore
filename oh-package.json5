@@ -1,0 +1,13 @@
+{
+  "name": "padelscore",
+  "version": "1.0.0",
+  "description": "Offline padel scoring for a round wearable display",
+  "main": "",
+  "author": "vekom",
+  "license": "UNLICENSED",
+  "dependencies": {},
+  "devDependencies": {
+    "@ohos/hypium": "1.0.6"
+  }
+}
+

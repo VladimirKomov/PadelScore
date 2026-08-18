@@ -1,2 +1,1 @@
-export { appTasks } from '@ohos/hvigor-ohos-plugin';
-
+export { legacyAppTasks } from '@ohos/hvigor-ohos-plugin';

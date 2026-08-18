@@ -114,6 +114,7 @@ export type MatchEvent =
   | { type: 'PointWon'; team: Team; occurredAt?: number }
   | { type: 'Undo' }
   | { type: 'Reset' }
+  | { type: 'ClearSession' }
   | { type: 'ChangeServer' }
   | { type: 'StartNextRound' };
 
@@ -133,4 +134,3 @@ export function otherTeam(team: Team): Team {
 export function cloneState(state: MatchState): MatchState {
   return JSON.parse(JSON.stringify(state)) as MatchState;
 }
-

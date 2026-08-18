@@ -1,2 +1,1 @@
-export { hapTasks } from '@ohos/hvigor-ohos-plugin';
-
+export { legacyHapTasks } from '@ohos/hvigor-ohos-plugin';

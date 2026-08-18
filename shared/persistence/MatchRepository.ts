@@ -1,11 +1,9 @@
-import data_preferences from '@ohos.data.preferences';
+import data_storage from '@ohos.data.storage';
 import hilog from '@ohos.hilog';
-import type common from '@ohos.app.ability.common';
 import { MatchEngine } from '../engine/MatchEngine';
 import type { MatchMode, ModeSettings } from '../engine/Types';
 import { joinChunks, splitIntoChunks } from './ChunkCodec';
 
-const STORE_NAME = 'padelscore_state';
 const CHUNK_COUNT_KEY = 'active_chunk_count';
 const CHUNK_PREFIX = 'active_chunk_';
 const SETTINGS_PREFIX = 'settings_';
@@ -13,16 +11,16 @@ const LOG_DOMAIN = 0x5044;
 const LOG_TAG = 'PadelScoreStore';
 
 export class MatchRepository {
-  private context: common.Context;
-  private store?: data_preferences.Preferences;
+  private storagePath: string;
+  private store?: data_storage.Storage;
 
-  constructor(context: common.Context) {
-    this.context = context;
+  constructor(storagePath: string) {
+    this.storagePath = storagePath;
   }
 
-  private async preferences(): Promise<data_preferences.Preferences> {
+  private async preferences(): Promise<data_storage.Storage> {
     if (this.store === undefined) {
-      this.store = await data_preferences.getPreferences(this.context, STORE_NAME);
+      this.store = await data_storage.getStorage(this.storagePath);
     }
     return this.store;
   }
@@ -123,4 +121,3 @@ export class MatchRepository {
     }
   }
 }
-

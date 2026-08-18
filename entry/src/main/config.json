@@ -1,0 +1,59 @@
+{
+  "app": {
+    "bundleName": "com.vekom.padelscore",
+    "vendor": "vekom",
+    "version": {
+      "code": 1000000,
+      "name": "1.0.0"
+    }
+  },
+  "deviceConfig": {},
+  "module": {
+    "package": "com.vekom.padelscore",
+    "name": ".entry",
+    "mainAbility": ".MainAbility",
+    "deviceType": ["wearable"],
+    "distro": {
+      "deliveryWithInstall": true,
+      "moduleName": "entry",
+      "moduleType": "entry",
+      "installationFree": false
+    },
+    "reqPermissions": [
+      {
+        "name": "ohos.permission.VIBRATE"
+      }
+    ],
+    "abilities": [
+      {
+        "skills": [
+          {
+            "entities": ["entity.system.home"],
+            "actions": ["action.system.home"]
+          }
+        ],
+        "orientation": "unspecified",
+        "formsEnabled": false,
+        "name": ".MainAbility",
+        "srcLanguage": "js",
+        "srcPath": "MainAbility",
+        "icon": "$media:icon",
+        "description": "$string:entry_ability_desc",
+        "label": "$string:entry_ability_label",
+        "type": "page",
+        "visible": true,
+        "launchType": "standard"
+      }
+    ],
+    "js": [
+      {
+        "pages": ["pages/index/index"],
+        "name": ".MainAbility",
+        "window": {
+          "designWidth": 466,
+          "autoDesignWidth": false
+        }
+      }
+    ]
+  }
+}

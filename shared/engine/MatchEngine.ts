@@ -98,6 +98,10 @@ export class MatchEngine {
       this.reset();
       return { accepted: true, reason: 'reset', completedNow: false };
     }
+    if (event.type === 'ClearSession') {
+      this.clearSession();
+      return { accepted: true, reason: 'session cleared', completedNow: false };
+    }
     if (event.type === 'ChangeServer') {
       this.historyValue.push(cloneState(this.stateValue));
       this.stateValue.currentServer = otherTeam(this.stateValue.currentServer);
@@ -155,6 +159,14 @@ export class MatchEngine {
       this.stateValue.sessionPointsB = sessionB;
       this.stateValue.roundNumber = roundNumber;
     }
+    this.historyValue = [];
+    this.lastAcceptedPointAt = -1;
+  }
+
+  clearSession(): void {
+    const mode = this.stateValue.mode;
+    const settings = this.stateValue.settings;
+    this.stateValue = createInitialState(mode, settings);
     this.historyValue = [];
     this.lastAcceptedPointAt = -1;
   }

@@ -166,6 +166,15 @@
     </div>
   </div>
 
+  <div if="{{showMenuView}}" class="screen menu-screen">
+    <text class="menu-title">{{ $t('strings.menu') }}</text>
+    <button class="menu-button continue-button" onclick="continueMatch">{{ $t('strings.continueMatch') }}</button>
+    <button class="menu-button" onclick="menuChangeServer">{{ $t('strings.changeServer') }}</button>
+    <button class="menu-button" onclick="menuHistory">{{ $t('strings.history') }}</button>
+    <button class="menu-button danger-menu-button" onclick="menuReset">{{ $t('strings.resetMatch') }}</button>
+    <button class="menu-button danger-menu-button" onclick="menuNewMatch">{{ $t('strings.newMatch') }}</button>
+  </div>
+
   <div if="{{showHistory}}" class="screen">
     <div class="history-header">
       <text class="page-title">{{ $t('strings.history') }}</text>

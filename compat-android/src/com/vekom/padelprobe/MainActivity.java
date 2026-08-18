@@ -109,6 +109,10 @@ public final class MainActivity extends Activity {
         private final int background = Color.rgb(4, 13, 10);
         private final int panel = Color.rgb(16, 34, 28);
         private final int panelLight = Color.rgb(25, 51, 42);
+        private final int classicPanel = Color.rgb(10, 72, 83);
+        private final int tieBreakPanel = Color.rgb(65, 49, 96);
+        private final int pointsPanel = Color.rgb(91, 62, 24);
+        private final int dangerPanel = Color.rgb(64, 25, 29);
         private final int green = Color.rgb(42, 232, 143);
         private final int teamA = Color.rgb(49, 196, 255);
         private final int teamB = Color.rgb(255, 179, 71);
@@ -162,55 +166,56 @@ public final class MainActivity extends Activity {
         }
 
         private void drawHome(Canvas canvas) {
-            text(canvas, "PADEL", BASE / 2, 48, 19, muted, Paint.Align.CENTER, true);
-            text(canvas, "SCORE", BASE / 2, 80, 34, green, Paint.Align.CENTER, true);
-            text(canvas, "Choose match format", BASE / 2, 104, 14, muted, Paint.Align.CENTER, false);
+            text(canvas, "PADEL", BASE / 2, 39, 18, muted, Paint.Align.CENTER, true);
+            text(canvas, "SCORE", BASE / 2, 70, 33, green, Paint.Align.CENTER, true);
+            text(canvas, "Choose match format", BASE / 2, 94, 15, muted, Paint.Align.CENTER, false);
 
             Mode[] modes = Mode.values();
             for (int i = 0; i < modes.length; i++) {
                 int column = i % 2;
                 int row = i / 2;
-                float left = column == 0 ? 48 : 239;
-                float top = 126 + row * 62;
-                button(canvas, left, top, left + 179, top + 50,
-                        shortMode(modes[i]), panel, Color.WHITE, 15);
+                float left = column == 0 ? 38 : 238;
+                float top = 108 + row * 68;
+                int fill = row == 0 ? classicPanel : row == 1 ? tieBreakPanel : pointsPanel;
+                button(canvas, left, top, left + 190, top + 58,
+                        shortMode(modes[i]), fill, Color.WHITE, 17);
             }
             if (hasSavedMatch()) {
-                button(canvas, 82, 326, 384, 378,
+                button(canvas, 70, 320, 396, 380,
                         engine.state().completed ? "VIEW LAST MATCH" : "RESUME MATCH",
-                        green, background, 16);
+                        green, background, 18);
             }
-            text(canvas, "Tap a format to configure", BASE / 2, 411, 13,
+            text(canvas, "Tap a format to configure", BASE / 2, 414, 14,
                     muted, Paint.Align.CENTER, false);
         }
 
         private void drawSettings(Canvas canvas) {
-            text(canvas, "SETTINGS", BASE / 2, 43, 26, green, Paint.Align.CENTER, true);
-            text(canvas, editing.mode.label.toUpperCase(), BASE / 2, 69, 14,
+            text(canvas, "SETTINGS", BASE / 2, 40, 28, green, Paint.Align.CENTER, true);
+            text(canvas, editing.mode.label.toUpperCase(), BASE / 2, 66, 15,
                     muted, Paint.Align.CENTER, true);
             int count = settingsRowCount();
             for (int i = 0; i < count; i++) {
-                drawSettingRow(canvas, i, 84 + i * 49);
+                drawSettingRow(canvas, i, 78 + i * 52);
             }
-            button(canvas, 64, 356, 220, 408, "BACK", panel, Color.WHITE, 17);
-            button(canvas, 246, 356, 402, 408, "START", green, background, 17);
-            text(canvas, "Targets: 7 / 10 / 15 / 21 / 24 / 32", BASE / 2, 435,
-                    11, muted, Paint.Align.CENTER, false);
+            button(canvas, 58, 348, 222, 414, "BACK", panelLight, Color.WHITE, 19);
+            button(canvas, 244, 348, 408, 414, "START", green, background, 19);
+            text(canvas, "Targets: 7 / 10 / 15 / 21 / 24 / 32", BASE / 2, 442,
+                    12, muted, Paint.Align.CENTER, false);
         }
 
         private void drawSettingRow(Canvas canvas, int index, float top) {
             String label = settingLabel(index);
             String value = settingValue(index);
-            rounded(canvas, 53, top, 413, top + 42, 16, panel);
-            text(canvas, label, 73, top + 27, 14, Color.WHITE, Paint.Align.LEFT, false);
+            rounded(canvas, 50, top, 416, top + 46, 18, panel);
+            text(canvas, label, 72, top + 30, 15, Color.WHITE, Paint.Align.LEFT, false);
             if (isNumericSetting(index)) {
-                circleButton(canvas, 302, top + 21, 16, "-", panelLight, Color.WHITE, 20);
-                text(canvas, value, 350, top + 27, 16, green, Paint.Align.CENTER, true);
-                circleButton(canvas, 398, top + 21, 16, "+", panelLight, Color.WHITE, 18);
+                circleButton(canvas, 300, top + 23, 18, "-", panelLight, Color.WHITE, 22);
+                text(canvas, value, 350, top + 30, 18, green, Paint.Align.CENTER, true);
+                circleButton(canvas, 400, top + 23, 18, "+", panelLight, Color.WHITE, 20);
             } else {
-                rounded(canvas, 320, top + 7, 402, top + 35, 14,
+                rounded(canvas, 316, top + 7, 407, top + 39, 16,
                         isOnValue(value) ? green : panelLight);
-                text(canvas, value, 361, top + 27, 12,
+                text(canvas, value, 361, top + 29, 13,
                         isOnValue(value) ? background : Color.WHITE,
                         Paint.Align.CENTER, true);
             }
@@ -218,48 +223,50 @@ public final class MainActivity extends Activity {
 
         private void drawMatch(Canvas canvas) {
             State state = engine.state();
-            rounded(canvas, 39, 22, 427, 184, 46, Color.rgb(8, 34, 45));
-            rounded(canvas, 39, 282, 427, 444, 46, Color.rgb(43, 29, 10));
+            rounded(canvas, 39, 18, 427, 176, 46, Color.rgb(8, 34, 45));
+            rounded(canvas, 39, 298, 427, 448, 46, Color.rgb(43, 29, 10));
             text(canvas, state.currentServer == Team.A ? "*  TEAM A" : "TEAM A",
-                    BASE / 2, 55, 15, teamA, Paint.Align.CENTER, true);
-            text(canvas, engine.score(Team.A), BASE / 2, 128, 70,
+                    BASE / 2, 50, 16, teamA, Paint.Align.CENTER, true);
+            text(canvas, engine.score(Team.A), BASE / 2, 122, 70,
                     Color.WHITE, Paint.Align.CENTER, true);
-            text(canvas, state.completed ? "FINISHED" : "+ POINT", BASE / 2, 165,
-                    13, muted, Paint.Align.CENTER, true);
+            text(canvas, state.completed ? "FINISHED" : "+ POINT", BASE / 2, 158,
+                    14, muted, Paint.Align.CENTER, true);
 
-            text(canvas, engine.modeLabel(), BASE / 2, 207, 15,
+            text(canvas, engine.modeLabel(), BASE / 2, 195, 16,
                     green, Paint.Align.CENTER, true);
-            text(canvas, engine.detailLabel(), BASE / 2, 229, 12,
+            text(canvas, engine.detailLabel(), BASE / 2, 217, 13,
                     muted, Paint.Align.CENTER, false);
-            text(canvas, engine.statusLabel(), BASE / 2, 250, 12,
+            text(canvas, engine.statusLabel(), BASE / 2, 237, 13,
                     state.completed ? green : Color.WHITE, Paint.Align.CENTER, true);
 
-            smallButton(canvas, 28, 258, 126, 287, "UNDO",
-                    engine.canUndo() ? panelLight : panel, engine.canUndo() ? Color.WHITE : muted);
-            smallButton(canvas, 134, 258, 232, 287, "MENU", panelLight, Color.WHITE);
+            smallButton(canvas, 28, 246, 128, 291, "UNDO",
+                    engine.canUndo() ? panelLight : panel,
+                    engine.canUndo() ? Color.WHITE : muted, 13);
+            smallButton(canvas, 136, 246, 236, 291, "MENU", green, background, 13);
             if (state.mode == Mode.AMERICANO && state.completed) {
-                smallButton(canvas, 240, 258, 438, 287, "NEXT ROUND", green, background);
+                smallButton(canvas, 244, 246, 438, 291, "NEXT ROUND", green, background, 13);
             } else {
-                smallButton(canvas, 240, 258, 438, 287,
+                smallButton(canvas, 244, 246, 438, 291,
                         state.settings.trackServe ? "CHANGE SERVE" : "HISTORY",
-                        panelLight, Color.WHITE);
+                        panelLight, Color.WHITE, 12);
             }
 
             text(canvas, state.currentServer == Team.B ? "*  TEAM B" : "TEAM B",
-                    BASE / 2, 316, 15, teamB, Paint.Align.CENTER, true);
-            text(canvas, engine.score(Team.B), BASE / 2, 389, 70,
+                    BASE / 2, 326, 16, teamB, Paint.Align.CENTER, true);
+            text(canvas, engine.score(Team.B), BASE / 2, 393, 68,
                     Color.WHITE, Paint.Align.CENTER, true);
-            text(canvas, state.completed ? "FINISHED" : "+ POINT", BASE / 2, 426,
-                    13, muted, Paint.Align.CENTER, true);
+            text(canvas, state.completed ? "FINISHED" : "+ POINT", BASE / 2, 431,
+                    14, muted, Paint.Align.CENTER, true);
         }
 
         private void drawMenu(Canvas canvas) {
-            text(canvas, "MATCH MENU", BASE / 2, 54, 26, green, Paint.Align.CENTER, true);
+            text(canvas, "MATCH MENU", BASE / 2, 49, 29, green, Paint.Align.CENTER, true);
             String[] items = {"CONTINUE", "CHANGE SERVE", "HISTORY", "RESET MATCH", "NEW MATCH"};
             for (int i = 0; i < items.length; i++) {
-                int color = i == 3 || i == 4 ? danger : Color.WHITE;
-                button(canvas, 66, 78 + i * 60, 400, 128 + i * 60,
-                        items[i], panel, color, 16);
+                int fill = i == 0 ? green : i >= 3 ? dangerPanel : panelLight;
+                int color = i == 0 ? background : i >= 3 ? danger : Color.WHITE;
+                button(canvas, 54, 66 + i * 68, 412, 128 + i * 68,
+                        items[i], fill, color, 19);
             }
         }
 
@@ -354,27 +361,30 @@ public final class MainActivity extends Activity {
         }
 
         private void handleHomeTap(float x, float y) {
-            if (y >= 126 && y <= 300) {
-                int row = (int) ((y - 126) / 62);
-                int column = x < 233 ? 0 : 1;
-                int index = row * 2 + column;
-                if (index >= 0 && index < Mode.values().length) {
-                    Mode mode = Mode.values()[index];
-                    editing = store.loadLastSettings(mode);
+            Mode[] modes = Mode.values();
+            for (int i = 0; i < modes.length; i++) {
+                int column = i % 2;
+                int row = i / 2;
+                float left = column == 0 ? 38 : 238;
+                float top = 108 + row * 68;
+                if (inside(x, y, left, top, left + 190, top + 58)) {
+                    editing = store.loadLastSettings(modes[i]);
                     screen = Screen.SETTINGS;
+                    return;
                 }
-            } else if (hasSavedMatch() && inside(x, y, 82, 326, 384, 378)) {
+            }
+            if (hasSavedMatch() && inside(x, y, 70, 320, 396, 380)) {
                 screen = Screen.MATCH;
                 keepAwake(!engine.state().completed);
             }
         }
 
         private void handleSettingsTap(float x, float y) {
-            if (inside(x, y, 64, 356, 220, 408)) {
+            if (inside(x, y, 58, 342, 222, 420)) {
                 screen = Screen.HOME;
                 return;
             }
-            if (inside(x, y, 246, 356, 402, 408)) {
+            if (inside(x, y, 244, 342, 408, 420)) {
                 store.saveLastSettings(editing);
                 engine = new MatchEngine(editing.mode, editing);
                 store.save(engine);
@@ -382,22 +392,30 @@ public final class MainActivity extends Activity {
                 keepAwake(true);
                 return;
             }
-            int index = (int) ((y - 84) / 49);
-            if (y >= 84 && index >= 0 && index < settingsRowCount()) {
-                adjustSetting(index, x >= 354 ? 1 : x >= 280 ? -1 : 0);
+            int index = (int) ((y - 78) / 52);
+            float rowTop = 78 + index * 52;
+            if (y >= 78 && index >= 0 && index < settingsRowCount()
+                    && y <= rowTop + 46) {
+                if (!isNumericSetting(index)) {
+                    adjustSetting(index, 0);
+                } else if (x >= 264 && x <= 330) {
+                    adjustSetting(index, -1);
+                } else if (x >= 370 && x <= 436) {
+                    adjustSetting(index, 1);
+                }
             }
         }
 
         private void handleMatchTap(float x, float y) {
-            if (inside(x, y, 39, 22, 427, 184)) {
+            if (inside(x, y, 39, 18, 427, 176)) {
                 addPoint(Team.A);
                 return;
             }
-            if (inside(x, y, 39, 292, 427, 444)) {
+            if (inside(x, y, 39, 298, 427, 448)) {
                 addPoint(Team.B);
                 return;
             }
-            if (inside(x, y, 28, 258, 126, 290)) {
+            if (inside(x, y, 28, 241, 128, 296)) {
                 if (engine.undo()) {
                     store.save(engine);
                     keepAwake(!engine.state().completed);
@@ -405,12 +423,12 @@ public final class MainActivity extends Activity {
                 }
                 return;
             }
-            if (inside(x, y, 134, 258, 232, 290)) {
+            if (inside(x, y, 136, 241, 236, 296)) {
                 screen = Screen.MENU;
                 keepAwake(false);
                 return;
             }
-            if (inside(x, y, 240, 258, 438, 290)) {
+            if (inside(x, y, 244, 241, 438, 296)) {
                 State state = engine.state();
                 if (state.mode == Mode.AMERICANO && state.completed) {
                     if (engine.startNextRound()) {
@@ -441,10 +459,14 @@ public final class MainActivity extends Activity {
         }
 
         private void handleMenuTap(float x, float y) {
-            if (x < 55 || x > 411 || y < 78 || y > 368) {
+            if (x < 46 || x > 420 || y < 66 || y > 400) {
                 return;
             }
-            int index = (int) ((y - 78) / 60);
+            int index = (int) ((y - 66) / 68);
+            float top = 66 + index * 68;
+            if (index < 0 || index > 4 || y > top + 62) {
+                return;
+            }
             if (index == 0) {
                 screen = Screen.MATCH;
                 keepAwake(!engine.state().completed);
@@ -678,9 +700,10 @@ public final class MainActivity extends Activity {
         }
 
         private void smallButton(Canvas canvas, float left, float top, float right, float bottom,
-                                 String label, int fill, int color) {
-            rounded(canvas, left, top, right, bottom, 13, fill);
-            text(canvas, label, (left + right) / 2, top + 20, 11, color,
+                                 String label, int fill, int color, float size) {
+            rounded(canvas, left, top, right, bottom, 18, fill);
+            text(canvas, label, (left + right) / 2,
+                    (top + bottom) / 2 + size * 0.36f, size, color,
                     Paint.Align.CENTER, true);
         }
 

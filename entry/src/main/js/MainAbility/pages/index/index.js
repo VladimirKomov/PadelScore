@@ -27,7 +27,9 @@ export default {
     showHome: true,
     showSettings: false,
     showMatch: false,
+    showMenuView: false,
     showHistory: false,
+    historyReturnView: 'match',
     selectedMode: 'americano',
     settingsTitle: 'AMERICANO',
     showAmericanoSettings: true,
@@ -105,6 +107,7 @@ export default {
     this.showHome = name === 'home';
     this.showSettings = name === 'settings';
     this.showMatch = name === 'match';
+    this.showMenuView = name === 'menu';
     this.showHistory = name === 'history';
     this.updateKeepScreen();
   },
@@ -364,31 +367,39 @@ export default {
   },
 
   settingsBack() { this.setView('home'); },
-  historyBack() { this.setView('match'); },
+  historyBack() { this.setView(this.historyReturnView); },
 
   openHistory() {
-    if (engine.state.mode === 'americano' || engine.state.roundHistory.length > 0) {
-      this.renderEngine();
-      this.setView('history');
+    this.renderEngine();
+    this.historyReturnView = this.showMenuView ? 'menu' : 'match';
+    this.setView('history');
+  },
+
+  showMenu() {
+    this.setView('menu');
+  },
+
+  continueMatch() {
+    this.setView('match');
+  },
+
+  async menuChangeServer() {
+    await this.changeServer();
+    this.setView('match');
+  },
+
+  menuHistory() {
+    this.openHistory();
+  },
+
+  async menuReset() {
+    if (await this.confirmReset()) {
+      this.setView('match');
     }
   },
 
-  async showMenu() {
-    const response = await prompt.showActionMenu({
-      title: this.$t('strings.menu'),
-      buttons: [
-        { text: this.$t('strings.changeServer'), color: '#41D9FF' },
-        { text: this.$t('strings.history'), color: '#FFFFFF' },
-        { text: this.$t('strings.resetMatch'), color: '#FF7A86' }
-      ]
-    });
-    if (response.index === 0) {
-      await this.changeServer();
-    } else if (response.index === 1) {
-      this.openHistory();
-    } else if (response.index === 2) {
-      await this.confirmReset();
-    }
+  async menuNewMatch() {
+    await this.requestHome();
   },
 
   async confirmReset() {
@@ -400,11 +411,12 @@ export default {
         { text: this.$t('strings.reset'), color: '#FF7A86' }
       ]
     });
-    if (response.index !== 1) return;
+    if (response.index !== 1) return false;
     engine.dispatch({ type: 'Reset' });
     this.renderEngine();
     await this.persist();
     await this.updateKeepScreen();
+    return true;
   },
 
   async clearSession() {

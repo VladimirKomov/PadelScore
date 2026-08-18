@@ -150,9 +150,24 @@ if (-not $SkipHap) {
     $legacyWrapper = Join-Path $repoRoot ".local-tools\hvigor-wrapper.cjs"
     Copy-Item -LiteralPath (Join-Path $repoRoot "hvigor\hvigor-wrapper.js") `
         -Destination $legacyWrapper -Force
+
+    # Hvigor 2.4.2 resolves the legacy API 8 packing tool through the uppercase
+    # PATH variable. Use a non-daemon build so a stale daemon cannot retain an
+    # older environment and lose the configured DevEco JDK.
+    $javaBin = Join-Path $javaHome "bin"
+    $processPath = [Environment]::GetEnvironmentVariable("Path", "Process")
+    $hapBuildPath = if ([string]::IsNullOrWhiteSpace($processPath)) {
+        $javaBin
+    } else {
+        "$javaBin;$processPath"
+    }
+    [Environment]::SetEnvironmentVariable("PATH", $hapBuildPath, "Process")
+    [Environment]::SetEnvironmentVariable("Path", $hapBuildPath, "Process")
+    $env:JAVA_HOME = $javaHome
+
     Push-Location $repoRoot
     try {
-        & $devEcoNode $legacyWrapper assembleHap --mode module `
+        & $devEcoNode $legacyWrapper assembleHap --no-daemon --mode module `
             -p product=default -p module=entry@default
         Assert-LastExitCode "HAP build"
     } finally {

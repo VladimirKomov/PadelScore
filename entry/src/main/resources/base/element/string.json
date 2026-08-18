@@ -35,6 +35,7 @@
     { "name": "games", "value": "GAMES" },
     { "name": "sets", "value": "SETS" },
     { "name": "menu", "value": "MENU" },
+    { "name": "continue_match", "value": "CONTINUE" },
     { "name": "change_server", "value": "CHANGE SERVER" },
     { "name": "reset_match", "value": "RESET MATCH" },
     { "name": "reset_question", "value": "Clear the current score?" },

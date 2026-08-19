@@ -10,9 +10,12 @@ import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.OverScroller;
 
 import java.util.List;
 
@@ -94,6 +97,7 @@ public final class MainActivity extends Activity {
     private enum Screen {
         HOME,
         SETTINGS,
+        PICKER,
         MATCH,
         MENU,
         HISTORY,
@@ -118,12 +122,32 @@ public final class MainActivity extends Activity {
         private final int teamB = Color.rgb(255, 179, 71);
         private final int muted = Color.rgb(151, 176, 166);
         private final int danger = Color.rgb(255, 102, 112);
+        private final Mode[] homeModes = {
+                Mode.CLASSIC,
+                Mode.AMERICANO,
+                Mode.SINGLE_SET,
+                Mode.TIE_BREAK,
+                Mode.SUPER_TIE_BREAK,
+                Mode.RACE_TO_N
+        };
+        private final OverScroller scroller;
+        private final int touchSlop;
+        private final int minimumFlingVelocity;
+        private final int maximumFlingVelocity;
         private Screen screen = Screen.HOME;
         private Screen returnFromHistory = Screen.MENU;
         private Settings editing;
+        private VelocityTracker velocityTracker;
         private float scale = 1f;
         private float offsetX;
         private float offsetY;
+        private float scrollOffset;
+        private float scrollMax;
+        private float downY;
+        private float lastY;
+        private float settingsScrollRestore;
+        private int pickerSettingIndex = -1;
+        private boolean dragging;
         private boolean touching;
         private float touchX;
         private float touchY;
@@ -132,6 +156,11 @@ public final class MainActivity extends Activity {
             super(MainActivity.this);
             setBackgroundColor(background);
             setFocusable(true);
+            scroller = new OverScroller(MainActivity.this);
+            ViewConfiguration configuration = ViewConfiguration.get(MainActivity.this);
+            touchSlop = configuration.getScaledTouchSlop();
+            minimumFlingVelocity = configuration.getScaledMinimumFlingVelocity();
+            maximumFlingVelocity = configuration.getScaledMaximumFlingVelocity();
         }
 
         @Override
@@ -148,6 +177,8 @@ public final class MainActivity extends Activity {
                 drawHome(canvas);
             } else if (screen == Screen.SETTINGS) {
                 drawSettings(canvas);
+            } else if (screen == Screen.PICKER) {
+                drawPicker(canvas);
             } else if (screen == Screen.MATCH) {
                 drawMatch(canvas);
             } else if (screen == Screen.MENU) {
@@ -166,59 +197,242 @@ public final class MainActivity extends Activity {
         }
 
         private void drawHome(Canvas canvas) {
-            text(canvas, "PADEL", BASE / 2, 39, 18, muted, Paint.Align.CENTER, true);
-            text(canvas, "SCORE", BASE / 2, 70, 33, green, Paint.Align.CENTER, true);
-            text(canvas, "Choose match format", BASE / 2, 94, 15, muted, Paint.Align.CENTER, false);
-
-            Mode[] modes = Mode.values();
-            for (int i = 0; i < modes.length; i++) {
-                int column = i % 2;
-                int row = i / 2;
-                float left = column == 0 ? 38 : 238;
-                float top = 108 + row * 68;
-                int fill = row == 0 ? classicPanel : row == 1 ? tieBreakPanel : pointsPanel;
-                button(canvas, left, top, left + 190, top + 58,
-                        shortMode(modes[i]), fill, Color.WHITE, 17);
-            }
+            canvas.save();
+            canvas.clipRect(0, 78, BASE, 456);
+            canvas.translate(0, -scrollOffset);
+            float top = 86;
             if (hasSavedMatch()) {
-                button(canvas, 70, 320, 396, 380,
-                        engine.state().completed ? "VIEW LAST MATCH" : "RESUME MATCH",
-                        green, background, 18);
+                drawSectionLabel(canvas, "CURRENT MATCH", top);
+                top += 27;
+                drawResumeRow(canvas, top);
+                top += 82;
             }
-            text(canvas, "Tap a format to configure", BASE / 2, 414, 14,
-                    muted, Paint.Align.CENTER, false);
+            drawSectionLabel(canvas, "POPULAR", top);
+            top += 27;
+            drawModeRow(canvas, Mode.CLASSIC, top);
+            top += 80;
+            drawModeRow(canvas, Mode.AMERICANO, top);
+            top += 88;
+            drawSectionLabel(canvas, "OTHER MODES", top);
+            top += 27;
+            for (int i = 2; i < homeModes.length; i++) {
+                drawModeRow(canvas, homeModes[i], top);
+                top += 80;
+            }
+            canvas.restore();
+            setScrollBounds(top + 8);
+            drawScrollIndicator(canvas);
+            drawHomeHeader(canvas);
         }
 
         private void drawSettings(Canvas canvas) {
-            text(canvas, "SETTINGS", BASE / 2, 40, 28, green, Paint.Align.CENTER, true);
-            text(canvas, editing.mode.label.toUpperCase(), BASE / 2, 66, 15,
-                    muted, Paint.Align.CENTER, true);
+            canvas.save();
+            canvas.clipRect(0, 78, BASE, 456);
+            canvas.translate(0, -scrollOffset);
+            float top = 87;
+            drawSectionLabel(canvas, "MATCH RULES", top);
+            top += 27;
             int count = settingsRowCount();
             for (int i = 0; i < count; i++) {
-                drawSettingRow(canvas, i, 78 + i * 52);
+                drawSettingRow(canvas, i, top);
+                top += 80;
             }
-            button(canvas, 58, 348, 222, 414, "BACK", panelLight, Color.WHITE, 19);
-            button(canvas, 244, 348, 408, 414, "START", green, background, 19);
-            text(canvas, "Targets: 7 / 10 / 15 / 21 / 24 / 32", BASE / 2, 442,
-                    12, muted, Paint.Align.CENTER, false);
+            drawStartRow(canvas, top);
+            top += 80;
+            canvas.restore();
+            setScrollBounds(top + 8);
+            drawScrollIndicator(canvas);
+            drawBackHeader(canvas, "MATCH SETTINGS", editing.mode.label.toUpperCase());
         }
 
         private void drawSettingRow(Canvas canvas, int index, float top) {
             String label = settingLabel(index);
             String value = settingValue(index);
-            rounded(canvas, 50, top, 416, top + 46, 18, panel);
-            text(canvas, label, 72, top + 30, 15, Color.WHITE, Paint.Align.LEFT, false);
+            rounded(canvas, 40, top, 426, top + 70, 31, panel);
+            circleButton(canvas, 78, top + 35, 23, settingIcon(index),
+                    settingColor(index), Color.WHITE, settingIcon(index).length() > 1 ? 12 : 16);
+            text(canvas, label.toUpperCase(), 112, top + 30, 15,
+                    Color.WHITE, Paint.Align.LEFT, true);
             if (isNumericSetting(index)) {
-                circleButton(canvas, 300, top + 23, 18, "-", panelLight, Color.WHITE, 22);
-                text(canvas, value, 350, top + 30, 18, green, Paint.Align.CENTER, true);
-                circleButton(canvas, 400, top + 23, 18, "+", panelLight, Color.WHITE, 20);
+                text(canvas, "SELECT VALUE", 112, top + 51, 10,
+                        muted, Paint.Align.LEFT, true);
+                text(canvas, value, 371, top + 43, 22,
+                        green, Paint.Align.RIGHT, true);
+                text(canvas, "›", 407, top + 47, 31,
+                        muted, Paint.Align.CENTER, false);
             } else {
-                rounded(canvas, 316, top + 7, 407, top + 39, 16,
+                text(canvas, "TAP TO CHANGE", 112, top + 51, 10,
+                        muted, Paint.Align.LEFT, true);
+                rounded(canvas, 326, top + 18, 408, top + 52, 17,
                         isOnValue(value) ? green : panelLight);
-                text(canvas, value, 361, top + 29, 13,
+                text(canvas, value, 367, top + 41, 13,
                         isOnValue(value) ? background : Color.WHITE,
                         Paint.Align.CENTER, true);
             }
+        }
+
+        private void drawPicker(Canvas canvas) {
+            int[] values = pickerValues();
+            int selected = currentNumericValue();
+            canvas.save();
+            canvas.clipRect(0, 78, BASE, 456);
+            canvas.translate(0, -scrollOffset);
+            float top = 88;
+            for (int value : values) {
+                boolean active = value == selected;
+                rounded(canvas, 52, top, 414, top + 64, 28,
+                        active ? green : panel);
+                text(canvas, Integer.toString(value), 89, top + 42, 24,
+                        active ? background : Color.WHITE, Paint.Align.LEFT, true);
+                if (active) {
+                    text(canvas, "SELECTED", 379, top + 39, 12,
+                            background, Paint.Align.RIGHT, true);
+                } else {
+                    text(canvas, "›", 386, top + 43, 27,
+                            muted, Paint.Align.CENTER, false);
+                }
+                top += 72;
+            }
+            canvas.restore();
+            setScrollBounds(top + 8);
+            drawScrollIndicator(canvas);
+            drawBackHeader(canvas, settingLabel(pickerSettingIndex).toUpperCase(),
+                    "SELECT VALUE");
+        }
+
+        private void drawHomeHeader(Canvas canvas) {
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(background);
+            canvas.drawRect(0, 0, BASE, 78, paint);
+            text(canvas, "PADEL SCORE", BASE / 2, 42, 26,
+                    green, Paint.Align.CENTER, true);
+            text(canvas, "CHOOSE MATCH FORMAT", BASE / 2, 67, 12,
+                    muted, Paint.Align.CENTER, true);
+        }
+
+        private void drawBackHeader(Canvas canvas, String title, String subtitle) {
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(background);
+            canvas.drawRect(0, 0, BASE, 78, paint);
+            circleButton(canvas, 54, 40, 25, "‹", panelLight, Color.WHITE, 30);
+            text(canvas, title, 94, 36, 18, Color.WHITE, Paint.Align.LEFT, true);
+            text(canvas, subtitle, 94, 57, 11, green, Paint.Align.LEFT, true);
+        }
+
+        private void drawSectionLabel(Canvas canvas, String label, float top) {
+            text(canvas, label, 58, top + 17, 11, muted, Paint.Align.LEFT, true);
+        }
+
+        private void drawResumeRow(Canvas canvas, float top) {
+            rounded(canvas, 40, top, 426, top + 70, 31, panelLight);
+            circleButton(canvas, 78, top + 35, 23, "▶", green, background, 14);
+            text(canvas, engine.state().completed ? "VIEW LAST MATCH" : "RESUME MATCH",
+                    112, top + 30, 16, Color.WHITE, Paint.Align.LEFT, true);
+            text(canvas, engine.modeLabel().toUpperCase(), 112, top + 51, 10,
+                    muted, Paint.Align.LEFT, true);
+            text(canvas, "›", 407, top + 47, 31, muted, Paint.Align.CENTER, false);
+        }
+
+        private void drawModeRow(Canvas canvas, Mode mode, float top) {
+            rounded(canvas, 40, top, 426, top + 70, 31, panel);
+            drawModeIcon(canvas, mode, 78, top + 35);
+            text(canvas, shortMode(mode), 112, top + 30, 16,
+                    Color.WHITE, Paint.Align.LEFT, true);
+            text(canvas, modeHint(mode), 112, top + 51, 10,
+                    muted, Paint.Align.LEFT, true);
+            text(canvas, "›", 407, top + 47, 31, muted, Paint.Align.CENTER, false);
+        }
+
+        private void drawModeIcon(Canvas canvas, Mode mode, float x, float y) {
+            int color = modeColor(mode);
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(color);
+            canvas.drawCircle(x, y, 23, paint);
+            paint.setColor(Color.WHITE);
+            paint.setStrokeWidth(3f);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            if (mode == Mode.CLASSIC) {
+                paint.setStyle(Paint.Style.STROKE);
+                canvas.drawCircle(x - 4, y - 4, 7, paint);
+                canvas.drawLine(x + 1, y + 1, x + 9, y + 9, paint);
+                paint.setStyle(Paint.Style.FILL);
+                canvas.drawCircle(x + 9, y - 8, 2.5f, paint);
+            } else if (mode == Mode.AMERICANO) {
+                canvas.drawCircle(x - 6, y - 6, 4, paint);
+                canvas.drawCircle(x + 6, y - 6, 4, paint);
+                canvas.drawCircle(x - 6, y + 6, 4, paint);
+                canvas.drawCircle(x + 6, y + 6, 4, paint);
+            } else if (mode == Mode.RACE_TO_N) {
+                canvas.drawRect(x - 8, y - 10, x - 5, y + 11, paint);
+                canvas.drawRect(x - 5, y - 10, x + 9, y - 1, paint);
+            } else {
+                String icon = mode == Mode.SINGLE_SET ? "1"
+                        : mode == Mode.TIE_BREAK ? "7" : "10";
+                text(canvas, icon, x, y + (icon.length() > 1 ? 5 : 7),
+                        icon.length() > 1 ? 13 : 18, Color.WHITE, Paint.Align.CENTER, true);
+            }
+            paint.setStrokeCap(Paint.Cap.BUTT);
+        }
+
+        private void drawStartRow(Canvas canvas, float top) {
+            rounded(canvas, 40, top, 426, top + 70, 31, green);
+            circleButton(canvas, 78, top + 35, 23, "▶", background,
+                    green, 14);
+            text(canvas, "START MATCH", 112, top + 41, 18,
+                    background, Paint.Align.LEFT, true);
+            text(canvas, "›", 407, top + 47, 31,
+                    background, Paint.Align.CENTER, false);
+        }
+
+        private void drawScrollIndicator(Canvas canvas) {
+            if (scrollMax <= 0) {
+                return;
+            }
+            float position = 93 + (scrollOffset / scrollMax) * 332;
+            rounded(canvas, 450, position, 454, position + 28, 2,
+                    Color.rgb(78, 104, 94));
+        }
+
+        private int modeColor(Mode mode) {
+            if (mode == Mode.CLASSIC) return Color.rgb(0, 167, 204);
+            if (mode == Mode.AMERICANO) return Color.rgb(238, 139, 43);
+            if (mode == Mode.SINGLE_SET) return Color.rgb(44, 143, 213);
+            if (mode == Mode.TIE_BREAK) return Color.rgb(121, 90, 203);
+            if (mode == Mode.SUPER_TIE_BREAK) return Color.rgb(161, 76, 181);
+            return Color.rgb(195, 145, 44);
+        }
+
+        private String modeHint(Mode mode) {
+            if (mode == Mode.CLASSIC) return "SETS AND GAMES";
+            if (mode == Mode.AMERICANO) return "FIXED TOTAL POINTS";
+            if (mode == Mode.SINGLE_SET) return "ONE SET";
+            if (mode == Mode.TIE_BREAK) return "FIRST TO 7";
+            if (mode == Mode.SUPER_TIE_BREAK) return "FIRST TO 10";
+            return "CUSTOM TARGET";
+        }
+
+        private String settingIcon(int index) {
+            if (editing.mode == Mode.CLASSIC) {
+                return new String[]{"S", "G", "★", "+2", "7"}[index];
+            }
+            if (editing.mode == Mode.SINGLE_SET) {
+                return new String[]{"G", "★", "+2", "7"}[index];
+            }
+            if (editing.mode == Mode.AMERICANO) {
+                return new String[]{"◎", "S", "↻", "A/B"}[index];
+            }
+            return new String[]{"◎", "+2", "A/B"}[index];
+        }
+
+        private int settingColor(int index) {
+            int[] colors = {
+                    Color.rgb(0, 167, 204),
+                    Color.rgb(100, 82, 190),
+                    Color.rgb(215, 137, 39),
+                    Color.rgb(20, 148, 111),
+                    Color.rgb(178, 70, 118)
+            };
+            return colors[index % colors.length];
         }
 
         private void drawMatch(Canvas canvas) {
@@ -323,25 +537,78 @@ public final class MainActivity extends Activity {
         public boolean onTouchEvent(MotionEvent event) {
             float x = (event.getX() - offsetX) / scale;
             float y = (event.getY() - offsetY) / scale;
-            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN) {
+                if (!scroller.isFinished()) {
+                    scroller.abortAnimation();
+                }
+                recycleVelocityTracker();
+                velocityTracker = VelocityTracker.obtain();
+                velocityTracker.addMovement(event);
+                downY = y;
+                lastY = y;
+                dragging = false;
                 touching = true;
                 touchX = x;
                 touchY = y;
                 invalidate();
                 return true;
             }
-            if (event.getAction() == MotionEvent.ACTION_CANCEL) {
+            if (action == MotionEvent.ACTION_MOVE) {
+                if (velocityTracker != null) {
+                    velocityTracker.addMovement(event);
+                }
+                if (isScrollableScreen()) {
+                    if (!dragging && Math.abs(y - downY) * scale > touchSlop) {
+                        dragging = true;
+                        touching = false;
+                    }
+                    if (dragging) {
+                        scrollOffset = clampScroll(scrollOffset - (y - lastY));
+                        invalidate();
+                    }
+                }
+                lastY = y;
+                return true;
+            }
+            if (action == MotionEvent.ACTION_CANCEL) {
                 touching = false;
+                dragging = false;
+                recycleVelocityTracker();
                 invalidate();
                 return true;
             }
-            if (event.getAction() == MotionEvent.ACTION_UP) {
+            if (action == MotionEvent.ACTION_UP) {
                 touching = false;
-                handleTap(x, y);
+                if (velocityTracker != null) {
+                    velocityTracker.addMovement(event);
+                }
+                if (dragging && velocityTracker != null) {
+                    velocityTracker.computeCurrentVelocity(1000, maximumFlingVelocity);
+                    float velocityY = velocityTracker.getYVelocity();
+                    if (Math.abs(velocityY) >= minimumFlingVelocity) {
+                        scroller.fling(0, Math.round(scrollOffset), 0,
+                                Math.round(-velocityY / scale), 0, 0,
+                                0, Math.round(scrollMax));
+                        postInvalidateOnAnimation();
+                    }
+                } else {
+                    handleTap(x, y);
+                }
+                dragging = false;
+                recycleVelocityTracker();
                 invalidate();
                 return true;
             }
             return true;
+        }
+
+        @Override
+        public void computeScroll() {
+            if (scroller.computeScrollOffset()) {
+                scrollOffset = clampScroll(scroller.getCurrY());
+                postInvalidateOnAnimation();
+            }
         }
 
         private void handleTap(float x, float y) {
@@ -349,6 +616,8 @@ public final class MainActivity extends Activity {
                 handleHomeTap(x, y);
             } else if (screen == Screen.SETTINGS) {
                 handleSettingsTap(x, y);
+            } else if (screen == Screen.PICKER) {
+                handlePickerTap(x, y);
             } else if (screen == Screen.MATCH) {
                 handleMatchTap(x, y);
             } else if (screen == Screen.MENU) {
@@ -361,48 +630,92 @@ public final class MainActivity extends Activity {
         }
 
         private void handleHomeTap(float x, float y) {
-            Mode[] modes = Mode.values();
-            for (int i = 0; i < modes.length; i++) {
-                int column = i % 2;
-                int row = i / 2;
-                float left = column == 0 ? 38 : 238;
-                float top = 108 + row * 68;
-                if (inside(x, y, left, top, left + 190, top + 58)) {
-                    editing = store.loadLastSettings(modes[i]);
-                    screen = Screen.SETTINGS;
+            if (y < 78) {
+                return;
+            }
+            float contentY = y + scrollOffset;
+            float top = 86;
+            if (hasSavedMatch()) {
+                top += 27;
+                if (inside(x, contentY, 40, top, 426, top + 70)) {
+                    showScreen(Screen.MATCH);
+                    keepAwake(!engine.state().completed);
                     return;
                 }
+                top += 82;
             }
-            if (hasSavedMatch() && inside(x, y, 70, 320, 396, 380)) {
-                screen = Screen.MATCH;
+            top += 27;
+            if (openModeIfTapped(x, contentY, Mode.CLASSIC, top)) return;
+            top += 80;
+            if (openModeIfTapped(x, contentY, Mode.AMERICANO, top)) return;
+            top += 88 + 27;
+            for (int i = 2; i < homeModes.length; i++) {
+                if (openModeIfTapped(x, contentY, homeModes[i], top)) return;
+                top += 80;
+            }
+        }
+
+        private boolean openModeIfTapped(float x, float y, Mode mode, float top) {
+            if (!inside(x, y, 40, top, 426, top + 70)) {
+                return false;
+            }
+            editing = store.loadLastSettings(mode);
+            showScreen(Screen.SETTINGS);
+            return true;
+        }
+
+        private void handleSettingsTap(float x, float y) {
+            if (inside(x, y, 24, 8, 96, 76)) {
+                showScreen(Screen.HOME);
+                return;
+            }
+            if (y < 78) {
+                return;
+            }
+            float contentY = y + scrollOffset;
+            float firstRow = 114;
+            int count = settingsRowCount();
+            int index = (int) ((contentY - firstRow) / 80);
+            float rowTop = firstRow + index * 80;
+            if (index >= 0 && index < count
+                    && inside(x, contentY, 40, rowTop, 426, rowTop + 70)) {
+                if (isNumericSetting(index)) {
+                    settingsScrollRestore = scrollOffset;
+                    pickerSettingIndex = index;
+                    showScreen(Screen.PICKER);
+                } else {
+                    adjustSetting(index, 0);
+                    buzz(14);
+                }
+                return;
+            }
+            float startTop = firstRow + count * 80;
+            if (inside(x, contentY, 40, startTop, 426, startTop + 70)) {
+                store.saveLastSettings(editing);
+                engine = new MatchEngine(editing.mode, editing);
+                store.save(engine);
+                showScreen(Screen.MATCH);
                 keepAwake(!engine.state().completed);
             }
         }
 
-        private void handleSettingsTap(float x, float y) {
-            if (inside(x, y, 58, 342, 222, 420)) {
-                screen = Screen.HOME;
+        private void handlePickerTap(float x, float y) {
+            if (inside(x, y, 24, 8, 96, 76)) {
+                returnToSettings();
                 return;
             }
-            if (inside(x, y, 244, 342, 408, 420)) {
-                store.saveLastSettings(editing);
-                engine = new MatchEngine(editing.mode, editing);
-                store.save(engine);
-                screen = Screen.MATCH;
-                keepAwake(true);
+            if (y < 78) {
                 return;
             }
-            int index = (int) ((y - 78) / 52);
-            float rowTop = 78 + index * 52;
-            if (y >= 78 && index >= 0 && index < settingsRowCount()
-                    && y <= rowTop + 46) {
-                if (!isNumericSetting(index)) {
-                    adjustSetting(index, 0);
-                } else if (x >= 264 && x <= 330) {
-                    adjustSetting(index, -1);
-                } else if (x >= 370 && x <= 436) {
-                    adjustSetting(index, 1);
-                }
+            float contentY = y + scrollOffset;
+            int index = (int) ((contentY - 88) / 72);
+            float rowTop = 88 + index * 72;
+            int[] values = pickerValues();
+            if (index >= 0 && index < values.length
+                    && inside(x, contentY, 52, rowTop, 414, rowTop + 64)) {
+                setNumericSettingValue(values[index]);
+                buzz(18);
+                returnToSettings();
             }
         }
 
@@ -524,21 +837,23 @@ public final class MainActivity extends Activity {
                 return false;
             }
             if (screen == Screen.SETTINGS) {
-                screen = Screen.HOME;
+                showScreen(Screen.HOME);
+            } else if (screen == Screen.PICKER) {
+                returnToSettings();
             } else if (screen == Screen.MATCH) {
-                screen = hasSavedMatch() && !engine.state().completed
-                        ? Screen.CONFIRM_EXIT : Screen.HOME;
+                showScreen(hasSavedMatch() && !engine.state().completed
+                        ? Screen.CONFIRM_EXIT : Screen.HOME);
                 keepAwake(false);
             } else if (screen == Screen.MENU) {
-                screen = Screen.MATCH;
+                showScreen(Screen.MATCH);
                 keepAwake(!engine.state().completed);
             } else if (screen == Screen.HISTORY) {
-                screen = returnFromHistory;
+                showScreen(returnFromHistory);
                 keepAwake(screen == Screen.MATCH && !engine.state().completed);
             } else if (screen == Screen.CONFIRM_CLEAR) {
-                screen = Screen.HISTORY;
+                showScreen(Screen.HISTORY);
             } else {
-                screen = Screen.MENU;
+                showScreen(Screen.MENU);
             }
             invalidate();
             return true;
@@ -605,6 +920,54 @@ public final class MainActivity extends Activity {
             return index == 0;
         }
 
+        private int[] pickerValues() {
+            if (editing.mode == Mode.CLASSIC && pickerSettingIndex == 0) {
+                return new int[]{1, 2, 3};
+            }
+            if ((editing.mode == Mode.CLASSIC && pickerSettingIndex == 1)
+                    || (editing.mode == Mode.SINGLE_SET && pickerSettingIndex == 0)) {
+                return range(1, 12);
+            }
+            if (editing.mode == Mode.AMERICANO && pickerSettingIndex == 2) {
+                return range(1, 16);
+            }
+            return new int[]{7, 10, 15, 21, 24, 32};
+        }
+
+        private int currentNumericValue() {
+            if (editing.mode == Mode.CLASSIC) {
+                return pickerSettingIndex == 0 ? editing.setsToWin : editing.gamesPerSet;
+            }
+            if (editing.mode == Mode.SINGLE_SET) {
+                return editing.gamesPerSet;
+            }
+            if (editing.mode == Mode.AMERICANO && pickerSettingIndex == 2) {
+                return editing.serveEvery;
+            }
+            return editing.target;
+        }
+
+        private void setNumericSettingValue(int value) {
+            if (editing.mode == Mode.CLASSIC) {
+                if (pickerSettingIndex == 0) editing.setsToWin = value;
+                else editing.gamesPerSet = value;
+            } else if (editing.mode == Mode.SINGLE_SET) {
+                editing.gamesPerSet = value;
+            } else if (editing.mode == Mode.AMERICANO && pickerSettingIndex == 2) {
+                editing.serveEvery = value;
+            } else {
+                editing.target = value;
+            }
+        }
+
+        private int[] range(int start, int end) {
+            int[] values = new int[end - start + 1];
+            for (int i = 0; i < values.length; i++) {
+                values[i] = start + i;
+            }
+            return values;
+        }
+
         private void adjustSetting(int index, int direction) {
             if (!isNumericSetting(index)) {
                 if (editing.mode == Mode.CLASSIC) {
@@ -666,6 +1029,48 @@ public final class MainActivity extends Activity {
             if (mode == Mode.SUPER_TIE_BREAK) return "SUPER TB";
             if (mode == Mode.RACE_TO_N) return "RACE TO N";
             return "AMERICANO";
+        }
+
+        private void showScreen(Screen target) {
+            screen = target;
+            resetScroll();
+        }
+
+        private void returnToSettings() {
+            screen = Screen.SETTINGS;
+            scroller.abortAnimation();
+            scrollOffset = settingsScrollRestore;
+            scrollMax = Math.max(scrollMax, scrollOffset);
+            pickerSettingIndex = -1;
+            invalidate();
+        }
+
+        private void resetScroll() {
+            scroller.abortAnimation();
+            scrollOffset = 0;
+            scrollMax = 0;
+            dragging = false;
+        }
+
+        private void setScrollBounds(float contentBottom) {
+            scrollMax = Math.max(0, contentBottom - 448f);
+            scrollOffset = clampScroll(scrollOffset);
+        }
+
+        private float clampScroll(float value) {
+            return Math.max(0, Math.min(scrollMax, value));
+        }
+
+        private boolean isScrollableScreen() {
+            return screen == Screen.HOME || screen == Screen.SETTINGS
+                    || screen == Screen.PICKER;
+        }
+
+        private void recycleVelocityTracker() {
+            if (velocityTracker != null) {
+                velocityTracker.recycle();
+                velocityTracker = null;
+            }
         }
 
         private String yesNo(boolean value) {

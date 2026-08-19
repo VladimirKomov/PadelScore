@@ -248,17 +248,17 @@ public final class MainActivity extends Activity {
             rounded(canvas, 32, top, 434, top + ROW_HEIGHT, 40, panel);
             circleButton(canvas, 76, top + 45, 28, settingIcon(index),
                     settingColor(index), Color.WHITE, settingIcon(index).length() > 1 ? 14 : 19);
-            text(canvas, label.toUpperCase(), 120, top + 55, 20,
+            text(canvas, label.toUpperCase(), 120, top + 55, 24,
                     Color.WHITE, Paint.Align.LEFT, true);
             if (isNumericSetting(index)) {
-                text(canvas, value, 378, top + 56, 26,
+                text(canvas, value, 378, top + 56, 30,
                         green, Paint.Align.RIGHT, true);
                 text(canvas, "›", 412, top + 59, 36,
                         muted, Paint.Align.CENTER, false);
             } else {
                 rounded(canvas, 326, top + 25, 412, top + 65, 20,
                         isOnValue(value) ? green : panelLight);
-                text(canvas, value, 369, top + 52, 16,
+                text(canvas, value, 369, top + 52, 18,
                         isOnValue(value) ? background : Color.WHITE,
                         Paint.Align.CENTER, true);
             }
@@ -275,7 +275,7 @@ public final class MainActivity extends Activity {
                 boolean active = value == selected;
                 rounded(canvas, 40, top, 426, top + PICKER_HEIGHT, 38,
                         active ? green : panel);
-                text(canvas, Integer.toString(value), 86, top + 54, 29,
+                text(canvas, Integer.toString(value), 86, top + 54, 34,
                         active ? background : Color.WHITE, Paint.Align.LEFT, true);
                 if (active) {
                     text(canvas, "✓", 386, top + 57, 28,
@@ -297,9 +297,9 @@ public final class MainActivity extends Activity {
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(background);
             canvas.drawRect(0, 0, BASE, 78, paint);
-            text(canvas, "PADEL SCORE", BASE / 2, 42, 26,
+            text(canvas, "PADEL SCORE", BASE / 2, 42, 28,
                     green, Paint.Align.CENTER, true);
-            text(canvas, "CHOOSE MATCH FORMAT", BASE / 2, 67, 12,
+            text(canvas, "CHOOSE MATCH FORMAT", BASE / 2, 67, 13,
                     muted, Paint.Align.CENTER, true);
         }
 
@@ -309,9 +309,9 @@ public final class MainActivity extends Activity {
             canvas.drawRect(0, 0, BASE, 78, paint);
             circleButton(canvas, 54, 40, 25, "‹", panelLight, Color.WHITE, 30);
             text(canvas, title, 94, subtitle.isEmpty() ? 47 : 36,
-                    subtitle.isEmpty() ? 21 : 18, Color.WHITE, Paint.Align.LEFT, true);
+                    subtitle.isEmpty() ? 23 : 20, Color.WHITE, Paint.Align.LEFT, true);
             if (!subtitle.isEmpty()) {
-                text(canvas, subtitle, 94, 57, 11, green, Paint.Align.LEFT, true);
+                text(canvas, subtitle, 94, 57, 12, green, Paint.Align.LEFT, true);
             }
         }
 
@@ -323,14 +323,14 @@ public final class MainActivity extends Activity {
             rounded(canvas, 32, top, 434, top + ROW_HEIGHT, 40, panelLight);
             circleButton(canvas, 76, top + 45, 28, "▶", green, background, 17);
             text(canvas, engine.state().completed ? "VIEW LAST MATCH" : "RESUME MATCH",
-                    120, top + 55, 20, Color.WHITE, Paint.Align.LEFT, true);
+                    120, top + 55, 24, Color.WHITE, Paint.Align.LEFT, true);
             text(canvas, "›", 412, top + 59, 36, muted, Paint.Align.CENTER, false);
         }
 
         private void drawModeRow(Canvas canvas, Mode mode, float top) {
             rounded(canvas, 32, top, 434, top + ROW_HEIGHT, 40, panel);
             drawModeIcon(canvas, mode, 76, top + 45);
-            text(canvas, shortMode(mode), 120, top + 55, 21,
+            text(canvas, shortMode(mode), 120, top + 55, 26,
                     Color.WHITE, Paint.Align.LEFT, true);
             text(canvas, "›", 412, top + 59, 36, muted, Paint.Align.CENTER, false);
         }
@@ -370,7 +370,7 @@ public final class MainActivity extends Activity {
             rounded(canvas, 32, top, 434, top + ROW_HEIGHT, 40, green);
             circleButton(canvas, 76, top + 45, 28, "▶", background,
                     green, 17);
-            text(canvas, "START", 120, top + 55, 22,
+            text(canvas, "START", 120, top + 55, 26,
                     background, Paint.Align.LEFT, true);
             text(canvas, "›", 412, top + 59, 36,
                     background, Paint.Align.CENTER, false);

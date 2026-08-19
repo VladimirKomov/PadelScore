@@ -48,21 +48,21 @@
 
 .brand {
   color: #41d9ff;
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 700;
   margin-top: 14px;
 }
 
 .page-title {
   color: #ffffff;
-  font-size: 23px;
+  font-size: 25px;
   font-weight: 700;
   text-align: center;
 }
 
 .mode-caption {
   color: #41d9ff;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   text-align: center;
   margin-top: 3px;
@@ -106,7 +106,7 @@
   height: 56px;
   border-radius: 28px;
   color: #ffffff;
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 700;
   text-align: center;
 }
@@ -187,7 +187,7 @@
 .control-label {
   width: 120px;
   color: #eef3f0;
-  font-size: 16px;
+  font-size: 24px;
   font-weight: 700;
   margin-left: 10px;
 }
@@ -207,13 +207,13 @@
   border-radius: 27px;
   background-color: #252b36;
   color: #ffffff;
-  font-size: 28px;
+  font-size: 30px;
 }
 
 .number-value {
   width: 57px;
   color: #ffffff;
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
   text-align: center;
 }
@@ -237,7 +237,7 @@
 .toggle-label {
   width: 180px;
   color: #e9edf5;
-  font-size: 16px;
+  font-size: 24px;
   font-weight: 700;
   margin-left: 10px;
 }
@@ -257,7 +257,7 @@ switch {
   border-radius: 40px;
   background-color: #41d9ff;
   color: #071015;
-  font-size: 21px;
+  font-size: 26px;
   font-weight: 700;
 }
 

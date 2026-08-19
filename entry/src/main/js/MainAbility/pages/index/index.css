@@ -27,7 +27,8 @@
 .toggle-item,
 .preset-item,
 .action-item,
-.bottom-item {
+.bottom-item,
+.scroll-spacer {
   width: 100%;
   display: flex;
   justify-content: center;
@@ -84,13 +85,13 @@
 }
 
 .mode-item {
-  height: 78px;
+  height: 94px;
 }
 
 .system-row {
-  width: 84%;
-  height: 70px;
-  border-radius: 35px;
+  width: 86%;
+  height: 86px;
+  border-radius: 43px;
   background-color: #14231e;
   display: flex;
   flex-direction: row;
@@ -101,17 +102,17 @@
 
 .mode-icon,
 .setting-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 23px;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
   color: #ffffff;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 700;
   text-align: center;
 }
 
 .icon-small {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .mode-copy {
@@ -124,23 +125,17 @@
 }
 
 .mode-title {
-  width: 100%;
+  width: 72%;
   color: #ffffff;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
-}
-
-.mode-subtitle {
-  width: 100%;
-  color: #94a29b;
-  font-size: 9px;
-  font-weight: 600;
+  margin-left: 14px;
 }
 
 .chevron {
   width: 24px;
   color: #829287;
-  font-size: 27px;
+  font-size: 32px;
   text-align: center;
 }
 
@@ -152,16 +147,16 @@
 .orange-one { background-color: #8a4b24; }
 
 .repeat-item {
-  height: 58px;
+  height: 90px;
 }
 
 .quiet-button {
-  height: 42px;
-  width: 70%;
-  border-radius: 21px;
+  height: 58px;
+  width: 78%;
+  border-radius: 29px;
   background-color: #242a34;
   color: #c3ccda;
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 600;
 }
 
@@ -174,13 +169,13 @@
 }
 
 .control-item {
-  height: 80px;
+  height: 94px;
 }
 
 .number-control {
-  width: 84%;
-  height: 70px;
-  border-radius: 35px;
+  width: 86%;
+  height: 86px;
+  border-radius: 43px;
   background-color: #14231e;
   display: flex;
   flex-direction: row;
@@ -190,16 +185,16 @@
 }
 
 .control-label {
-  width: 126px;
+  width: 120px;
   color: #eef3f0;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   margin-left: 10px;
 }
 
 .number-row {
-  width: 150px;
-  height: 50px;
+  width: 165px;
+  height: 58px;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -207,30 +202,30 @@
 }
 
 .round-control {
-  width: 46px;
-  height: 46px;
-  border-radius: 23px;
+  width: 54px;
+  height: 54px;
+  border-radius: 27px;
   background-color: #252b36;
   color: #ffffff;
-  font-size: 24px;
+  font-size: 28px;
 }
 
 .number-value {
-  width: 54px;
+  width: 57px;
   color: #ffffff;
-  font-size: 25px;
+  font-size: 28px;
   font-weight: 700;
   text-align: center;
 }
 
 .toggle-item {
-  height: 80px;
+  height: 94px;
 }
 
 .toggle-row {
-  width: 84%;
-  height: 70px;
-  border-radius: 35px;
+  width: 86%;
+  height: 86px;
+  border-radius: 43px;
   background-color: #14231e;
   display: flex;
   flex-direction: row;
@@ -240,9 +235,9 @@
 }
 
 .toggle-label {
-  width: 190px;
+  width: 180px;
   color: #e9edf5;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   margin-left: 10px;
 }
@@ -253,21 +248,25 @@ switch {
 }
 
 .action-item {
-  height: 78px;
+  height: 94px;
 }
 
 .start-button {
-  width: 84%;
-  height: 64px;
-  border-radius: 32px;
+  width: 86%;
+  height: 80px;
+  border-radius: 40px;
   background-color: #41d9ff;
   color: #071015;
-  font-size: 18px;
+  font-size: 21px;
   font-weight: 700;
 }
 
 .bottom-item {
-  height: 54px;
+  height: 82px;
+}
+
+.scroll-spacer {
+  height: 160px;
 }
 
 .match-screen {
@@ -548,6 +547,6 @@ switch {
   .number-control,
   .toggle-row,
   .start-button {
-    width: 84%;
+    width: 86%;
   }
 }

@@ -7,51 +7,50 @@
           <text class="page-title">{{ $t('strings.chooseMode') }}</text>
         </div>
       </list-item>
-      <list-item class="section-item"><text class="section-label">{{ $t('strings.popular') }}</text></list-item>
       <list-item class="mode-item">
         <div class="system-row" onclick="chooseClassic">
           <text class="mode-icon blue-one">C</text>
-          <div class="mode-copy"><text class="mode-title">{{ $t('strings.classic') }}</text><text class="mode-subtitle">{{ $t('strings.classicHint') }}</text></div>
+          <text class="mode-title">{{ $t('strings.classic') }}</text>
           <text class="chevron">›</text>
         </div>
       </list-item>
       <list-item class="mode-item">
         <div class="system-row" onclick="chooseAmericano">
           <text class="mode-icon orange-one">A</text>
-          <div class="mode-copy"><text class="mode-title">{{ $t('strings.americano') }}</text><text class="mode-subtitle">{{ $t('strings.americanoHint') }}</text></div>
+          <text class="mode-title">{{ $t('strings.americano') }}</text>
           <text class="chevron">›</text>
         </div>
       </list-item>
-      <list-item class="section-item"><text class="section-label">{{ $t('strings.otherModes') }}</text></list-item>
       <list-item class="mode-item">
         <div class="system-row" onclick="chooseSingleSet">
           <text class="mode-icon blue-two">1</text>
-          <div class="mode-copy"><text class="mode-title">{{ $t('strings.singleSet') }}</text><text class="mode-subtitle">{{ $t('strings.singleHint') }}</text></div>
+          <text class="mode-title">{{ $t('strings.singleSet') }}</text>
           <text class="chevron">›</text>
         </div>
       </list-item>
       <list-item class="mode-item">
         <div class="system-row" onclick="chooseTieBreak">
           <text class="mode-icon violet-one">7</text>
-          <div class="mode-copy"><text class="mode-title">{{ $t('strings.tieBreak') }}</text><text class="mode-subtitle">{{ $t('strings.tieHint') }}</text></div>
+          <text class="mode-title">{{ $t('strings.tieBreak') }}</text>
           <text class="chevron">›</text>
         </div>
       </list-item>
       <list-item class="mode-item">
         <div class="system-row" onclick="chooseSuperTieBreak">
           <text class="mode-icon violet-two icon-small">10</text>
-          <div class="mode-copy"><text class="mode-title">{{ $t('strings.superTieBreak') }}</text><text class="mode-subtitle">{{ $t('strings.superHint') }}</text></div>
+          <text class="mode-title">{{ $t('strings.superTieBreak') }}</text>
           <text class="chevron">›</text>
         </div>
       </list-item>
       <list-item class="mode-item">
         <div class="system-row" onclick="chooseRace">
           <text class="mode-icon amber-one">N</text>
-          <div class="mode-copy"><text class="mode-title">{{ $t('strings.raceToN') }}</text><text class="mode-subtitle">{{ $t('strings.raceHint') }}</text></div>
+          <text class="mode-title">{{ $t('strings.raceToN') }}</text>
           <text class="chevron">›</text>
         </div>
       </list-item>
       <list-item class="repeat-item"><button class="quiet-button" onclick="repeatLast">{{ $t('strings.repeatLast') }}</button></list-item>
+      <list-item class="scroll-spacer"><div></div></list-item>
     </list>
   </div>
 
@@ -166,6 +165,7 @@
 
       <list-item class="action-item"><button class="start-button" onclick="startSelectedMode">{{ $t('strings.start') }}</button></list-item>
       <list-item class="bottom-item"><button class="quiet-button" onclick="settingsBack">{{ $t('strings.back') }}</button></list-item>
+      <list-item class="scroll-spacer"><div></div></list-item>
     </list>
   </div>
 

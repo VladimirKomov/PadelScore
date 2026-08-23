@@ -114,7 +114,7 @@ export default {
 
   async updateKeepScreen() {
     try {
-      const active = this.showMatch && !engine.state.completed;
+      const active = this.showMatch;
       const mainWindow = await featureAbility.getWindow();
       await mainWindow.setKeepScreenOn(active);
     } catch (error) {

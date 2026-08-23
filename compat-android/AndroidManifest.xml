@@ -15,7 +15,9 @@
 
     <application
         android:allowBackup="false"
+        android:icon="@drawable/padelscore_icon"
         android:label="PadelScore"
+        android:roundIcon="@drawable/padelscore_icon"
         android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
         <activity
             android:name=".MainActivity"

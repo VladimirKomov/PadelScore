@@ -1,55 +1,135 @@
 # PadelScore
 
-Offline padel scoring for HUAWEI WATCH 4 Pro. The primary application targets
-the HarmonyOS/OpenHarmony API 8 FA model and produces a signed HAP. API 8
-wearable applications use the supported JS/HML/CSS UI stack; the pure scoring
-model is kept under `shared/` as typed source and transpiled into the on-device
-JavaScript modules.
+Автономный счётчик для падела, рассчитанный на круглый экран умных часов.
+PadelScore помогает вести счёт, отслеживать подачу, отменять ошибочные нажатия
+и продолжать матч после закрытия приложения. Интернет и телефон во время игры
+не требуются.
 
-Modes: Classic Match, Single Set, Tie-break, Super Tie-break, Race to N and
-Americano Fixed Total Points. Every mode supports persistent state and Undo.
-The watch UI also provides serve tracking, confirmations, round history and
-large tap zones designed for a circular display.
+<p align="center">
+  <img src="docs/images/padelscore-home.png" width="280" alt="Главное меню PadelScore">
+  <img src="docs/images/padelscore-match.png" width="280" alt="Экран счёта PadelScore">
+</p>
 
-## User guide
+## Возможности
 
-The Russian watch UI guide covers every game mode, match setting, scoring
-control, menu item, Americano history and state recovery workflow:
+- Classic Match и Single Set;
+- Tie-break до 7 и Super Tie-break до 10;
+- Race to N с настраиваемой целью;
+- Americano с фиксированным общим количеством очков;
+- учёт подающей команды и автоматическая смена подачи;
+- Undo, сброс текущего матча и история раундов Americano;
+- автоматическое сохранение и `Resume Match`;
+- управление касанием, вращением колёсика и свайпом назад;
+- крупные элементы для круглого экрана;
+- экран счёта остаётся включённым, в том числе после завершения матча;
+- автономная работа без сетевых разрешений.
+
+Подробное описание всех режимов и пунктов меню находится в
 [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md).
 
-## Local verification
+## Совместимость
+
+| Устройство или сборка | Статус |
+|---|---|
+| HUAWEI WATCH 4 Pro, `MDS-AL00`, 466×466, retail-прошивка | Проверено: совместимый APK устанавливается и работает |
+| HarmonyOS/OpenHarmony API 8 HAP | Собирается и подписывается; на проверенной retail-прошивке отсутствует HAP gateway-контейнер |
+| Другие модели HUAWEI WATCH | Не проверено: перед установкой необходимо определить модель, разрешение, SDK и доступный способ установки |
+
+Название HUAWEI WATCH само по себе не гарантирует совместимость. На разных
+моделях и региональных прошивках могут отличаться контейнер приложений,
+поддержка HDB/HDC, размер экрана, системные жесты и события колёсика.
+
+## Установка
+
+### Готовая сборка
+
+Для обычного пользователя рекомендуется подписанный APK, опубликованный
+владельцем проекта в GitHub Releases. Для последующих обновлений должен
+использоваться тот же ключ подписи. APK из неизвестных источников устанавливать
+не следует.
+
+Retail-прошивка проверенных WATCH 4 Pro требует включённого режима разработчика,
+беспроводной HDB-отладки и HDB-проверки пакета. Полная последовательность
+описана в [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+### Из исходников
+
+Потребуются Windows 11, PowerShell, DevEco Studio/Huawei SDK, JDK, Node.js,
+Android API 31, Android Build Tools и R8/D8.
 
 ```powershell
-npm test
-.\hvigorw.bat assembleHap --mode module -p product=default -p module=entry@default
+git clone <repository-url>
+Set-Location PadelScore
+Copy-Item .\watch-deploy.example.psd1 .\watch-deploy.local.psd1
 ```
 
-## Watch firmware compatibility
+Заполните локальный конфиг своими путями, IP часов, паролями и SHA-256
+сертификата. Файл `watch-deploy.local.psd1` исключён из Git и не должен
+публиковаться.
 
-`compat-android/` contains a platform-only Java compatibility package for
-retail Watch 4 firmware that exposes the Android application container but
-does not provide the OpenHarmony HAP gateway service. It mirrors the scoring
-engine and round UI from the primary HAP and is built without network access or
-third-party runtime dependencies.
+Для проверенной retail-прошивки подключите часы тем же `HdcExternal.exe`,
+который указан в конфиге, а затем выполните:
 
 ```powershell
-.\compat-android\build.ps1 `
-  -AndroidJar <path-to-android.jar> `
-  -BuildTools <path-to-build-tools> `
-  -JavaHome <path-to-jdk> `
-  -KeyStore <path-to-keystore> `
-  -D8Jar <optional-stable-r8.jar>
+.\scripts\deploy-watch.ps1 -SkipHap
 ```
 
-Signing certificates, profiles, IDE state, build outputs and local SDK paths
-are excluded from version control.
-
-## Deployment
-
-The repeatable build, signing and Watch 4 installation workflow is documented
-in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). On a configured workstation the
-complete test/build/deploy/smoke cycle is one command:
+Полный цикл с тестами, APK и HAP:
 
 ```powershell
 .\scripts\deploy-watch.ps1
 ```
+
+Скрипт проверяет подпись, обновляет приложение без удаления данных, запускает
+его на часах и сохраняет контрольный снимок экрана.
+
+## Проверка другой модели часов
+
+До установки соберите сведения об устройстве. Подставьте путь к совместимому
+`HdcExternal.exe` и фактический target:
+
+```powershell
+$hdc = '<path-to-HdcExternal.exe>'
+$target = '<watch-ip>:5555'
+
+& $hdc list targets -v
+& $hdc -t $target shell "getprop ro.product.model"
+& $hdc -t $target shell "getprop ro.build.version.sdk; wm size; wm density"
+```
+
+Не удаляйте уже установленную версию при ошибке подписи: удаление сотрёт
+сохранённый матч. Сначала проверьте package ID и сертификат APK.
+
+## Структура проекта
+
+| Каталог | Назначение |
+|---|---|
+| `compat-android/` | Java APK, проверенный на retail-прошивке WATCH 4 Pro |
+| `entry/` | HarmonyOS/OpenHarmony API 8 HAP: JS, HML и CSS |
+| `shared/` | Типизированная логика матчей и сохранения |
+| `tests/` | Тесты правил счёта и восстановления состояния |
+| `scripts/` | Воспроизводимая сборка, подпись, установка и smoke-тест |
+| `docs/` | Руководство пользователя и подробная инструкция разработчика |
+
+Правила счёта реализованы параллельно для HAP и совместимого APK. При изменении
+логики необходимо обновлять обе реализации и оба набора тестов. Дополнительные
+правила для coding-агентов находятся в [`AGENTS.md`](AGENTS.md).
+
+## Тестирование
+
+```powershell
+npm test
+.\compat-android\test.ps1 -JavaHome '<path-to-jdk>'
+```
+
+Полный `deploy-watch.ps1` дополнительно собирает и проверяет подписи артефактов.
+
+## Данные и разрешения
+
+PadelScore хранит состояние матча локально на часах. Совместимый APK запрашивает
+только разрешение на вибрацию и не использует сеть, геолокацию, микрофон или
+контакты.
+
+## Лицензия
+
+Проект распространяется по лицензии [MIT](LICENSE).

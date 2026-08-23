@@ -44,7 +44,22 @@ if ($LASTEXITCODE -ne 0) { throw "d8 failed" }
 
 $aapt2 = Join-Path $BuildTools "aapt2.exe"
 $baseApk = Join-Path $buildRoot "padelscore-base.apk"
-& $aapt2 link --manifest (Join-Path $moduleRoot "AndroidManifest.xml") -I $AndroidJar -o $baseApk
+$resourceRoot = Join-Path $moduleRoot "res"
+$compiledResources = Join-Path $buildRoot "resources.zip"
+$linkArguments = @(
+    "link",
+    "--manifest", (Join-Path $moduleRoot "AndroidManifest.xml"),
+    "-I", $AndroidJar,
+    "-o", $baseApk
+)
+
+if (Test-Path -LiteralPath $resourceRoot -PathType Container) {
+    & $aapt2 compile --dir $resourceRoot -o $compiledResources
+    if ($LASTEXITCODE -ne 0) { throw "aapt2 compile failed" }
+    $linkArguments += @("-R", $compiledResources)
+}
+
+& $aapt2 @linkArguments
 if ($LASTEXITCODE -ne 0) { throw "aapt2 link failed" }
 
 Push-Location $dexRoot

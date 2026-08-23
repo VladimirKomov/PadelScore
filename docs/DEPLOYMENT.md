@@ -3,9 +3,9 @@
 Использование приложения, режимы, настройки и все пункты меню описаны в
 [`USER_GUIDE.md`](USER_GUIDE.md).
 
-Эта инструкция фиксирует рабочий процесс для HUAWEI WATCH 4 Pro MDS-AL00
-(`192.168.101.17:5555`) и устраняет необходимость повторно исследовать способ
-подключения, подписи и установки.
+Эта инструкция фиксирует рабочий процесс, проверенный на HUAWEI WATCH 4 Pro
+MDS-AL00 с retail-прошивкой. IP-адрес, пути SDK и параметры подписи задаются
+локально и не должны попадать в Git.
 
 ## Что фактически устанавливается
 
@@ -42,7 +42,7 @@ signing/
 watch-deploy.local.psd1
 ```
 
-На настроенной машине они уже подготовлены. Для новой машины:
+Для новой машины:
 
 1. Скопируйте `watch-deploy.example.psd1` в `watch-deploy.local.psd1`.
 2. Укажите пути к `HdcExternal.exe`, JDK, npm, Android SDK tools и keystore.
@@ -51,7 +51,7 @@ watch-deploy.local.psd1
 4. Никогда не коммитьте локальный конфиг, `.local-tools/`, `signing/` или
    содержимое каталогов `build/`.
 
-Рабочие версии на этой машине:
+Версии инструментов, на которых подтверждена сборка:
 
 - `HdcExternal.exe` 1.0.6 из Huawei SDK 3.1;
 - Android API 31 (`android.jar`);
@@ -89,7 +89,7 @@ watch-deploy.local.psd1
 сети. Затем из PowerShell:
 
 ```powershell
-Set-Location C:\Users\vekom\DevEcoStudioProjects\PadelScore
+Set-Location <path-to-cloned-repository>
 .\scripts\deploy-watch.ps1
 ```
 
@@ -134,7 +134,7 @@ Set-Location C:\Users\vekom\DevEcoStudioProjects\PadelScore
 ```powershell
 npm test
 .\hvigorw.bat assembleHap --mode module -p product=default -p module=entry@default
-.\compat-android\test.ps1 -JavaHome "C:\Program Files\Huawei\DevEco Studio\jbr"
+.\compat-android\test.ps1 -JavaHome '<path-to-jdk>'
 ```
 
 ## Готовые артефакты
@@ -148,13 +148,37 @@ compat-android/build/smoke-latest.png
 Перед передачей APK проверьте, что скрипт вывел ожидаемый SHA-256 сертификата,
 а `git status --short` не показывает ключи, профили или локальные инструменты.
 
+## Другая модель часов
+
+Не устанавливайте сборку вслепую только потому, что устройство называется
+HUAWEI WATCH. На разных моделях и прошивках отличаются приложение-контейнер,
+HDB/HDC, разрешение, системные жесты и события колёсика.
+
+До установки получите сведения об устройстве:
+
+```powershell
+$hdc = '<path-to-compatible-HdcExternal.exe>'
+$target = '<watch-ip>:5555'
+
+& $hdc list targets -v
+& $hdc -t $target shell "getprop ro.product.model"
+& $hdc -t $target shell "getprop ro.product.name; getprop ro.build.version.sdk"
+& $hdc -t $target shell "wm size; wm density"
+```
+
+Сначала попробуйте существующий подписанный APK без изменения package ID.
+Если установка поддерживается, проверьте круговую обрезку, размер текста,
+касания у краёв, колёсико, свайп назад и системное время отключения экрана.
+Только после этого добавляйте изолированные изменения для новой модели и
+фиксируйте результат в таблице совместимости README.
+
 ## Типовые проблемы
 
 ### Target не найден
 
 ```powershell
-Test-NetConnection 192.168.101.17 -Port 5555
-& "C:\Users\vekom\HuaweiSdk31\hmscore\3.1.0\toolchains\HdcExternal.exe" list targets -v
+Test-NetConnection <watch-ip> -Port 5555
+& '<path-to-HdcExternal.exe>' list targets -v
 ```
 
 Если порт закрыт или target исчез, разбудите часы, проверьте Wi-Fi и экран

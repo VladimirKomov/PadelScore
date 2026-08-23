@@ -321,9 +321,9 @@ switch {
 }
 
 .score-card {
-  width: 82%;
-  height: 122px;
-  border-radius: 34px;
+  width: 84%;
+  height: 132px;
+  border-radius: 46px;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -331,13 +331,13 @@ switch {
   padding-right: 34px;
 }
 
-.team-a { background-color: #0c5369; }
-.team-b { background-color: #72551b; }
+.team-a { background-color: #08222d; }
+.team-b { background-color: #2b1d0a; }
 .complete-card { opacity: 0.62; }
 
 .team-name {
   width: 56%;
-  font-size: 16px;
+  font-size: 19px;
   font-weight: 700;
 }
 
@@ -347,7 +347,7 @@ switch {
 .score-value {
   width: 44%;
   color: #ffffff;
-  font-size: 52px;
+  font-size: 64px;
   font-weight: 700;
   text-align: right;
 }
@@ -364,14 +364,14 @@ switch {
 .detail-line {
   width: 100%;
   color: #d7dde8;
-  font-size: 12px;
+  font-size: 15px;
   text-align: center;
 }
 
 .server-line {
   width: 100%;
   color: #ffcb45;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   text-align: center;
 }
@@ -379,7 +379,7 @@ switch {
 .status-line {
   width: 100%;
   color: #8490a2;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   text-align: center;
 }
@@ -397,9 +397,9 @@ switch {
 
 .undo-button,
 .finish-button {
-  height: 42px;
-  border-radius: 21px;
-  font-size: 13px;
+  height: 50px;
+  border-radius: 25px;
+  font-size: 16px;
   font-weight: 700;
   margin-left: 4px;
   margin-right: 4px;

@@ -4,9 +4,11 @@ import android.app.Activity;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.MotionEvent;
@@ -19,6 +21,7 @@ import android.view.WindowManager;
 import android.widget.OverScroller;
 
 import java.util.List;
+import java.util.Collections;
 
 import static com.vekom.padelprobe.MatchModel.Mode;
 import static com.vekom.padelprobe.MatchModel.Settings;
@@ -113,8 +116,12 @@ public final class MainActivity extends Activity {
         private static final float ROW_STEP = 100f;
         private static final float PICKER_HEIGHT = 84f;
         private static final float PICKER_STEP = 94f;
+        private static final float NESTED_HEADER_BOTTOM = 100f;
+        private static final float NESTED_CONTENT_TOP = 108f;
         private static final float BOTTOM_SCROLL_SPACE = 160f;
         private static final float ROTARY_SCROLL_STEP = 68f;
+        private static final float BACK_SWIPE_DISTANCE = 110f;
+        private static final long SCORE_FLASH_MILLISECONDS = 420L;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF rectangle = new RectF();
         private final int background = Color.rgb(4, 13, 10);
@@ -150,11 +157,19 @@ public final class MainActivity extends Activity {
         private float offsetY;
         private float scrollOffset;
         private float scrollMax;
+        private float downX;
         private float downY;
         private float lastY;
         private float settingsScrollRestore;
         private int pickerSettingIndex = -1;
+        private Team scoreFlashTeam;
+        private long scoreFlashUntil;
         private boolean dragging;
+        private boolean gestureDirectionLocked;
+        private boolean horizontalBackGesture;
+        private boolean nestedGestureExclusion;
+        private int gestureExclusionWidth = -1;
+        private int gestureExclusionHeight = -1;
         private boolean touching;
         private float touchX;
         private float touchY;
@@ -173,8 +188,15 @@ public final class MainActivity extends Activity {
         }
 
         @Override
+        protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+            super.onSizeChanged(width, height, oldWidth, oldHeight);
+            updateSystemGestureExclusion();
+        }
+
+        @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            updateSystemGestureExclusion();
             scale = Math.min(getWidth(), getHeight()) / BASE;
             offsetX = (getWidth() - BASE * scale) / 2f;
             offsetY = (getHeight() - BASE * scale) / 2f;
@@ -205,6 +227,25 @@ public final class MainActivity extends Activity {
             canvas.restore();
         }
 
+        private void updateSystemGestureExclusion() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+                    || getWidth() <= 0 || getHeight() <= 0) {
+                return;
+            }
+            boolean nested = screen != Screen.HOME;
+            if (nested == nestedGestureExclusion
+                    && getWidth() == gestureExclusionWidth
+                    && getHeight() == gestureExclusionHeight) {
+                return;
+            }
+            MainActivity.this.getWindow().getDecorView().setSystemGestureExclusionRects(nested
+                    ? Collections.singletonList(new Rect(0, 0, getWidth(), getHeight()))
+                    : Collections.emptyList());
+            nestedGestureExclusion = nested;
+            gestureExclusionWidth = getWidth();
+            gestureExclusionHeight = getHeight();
+        }
+
         private void drawHome(Canvas canvas) {
             canvas.save();
             canvas.clipRect(0, 78, BASE, 456);
@@ -226,9 +267,9 @@ public final class MainActivity extends Activity {
 
         private void drawSettings(Canvas canvas) {
             canvas.save();
-            canvas.clipRect(0, 78, BASE, 456);
+            canvas.clipRect(0, NESTED_HEADER_BOTTOM, BASE, 456);
             canvas.translate(0, -scrollOffset);
-            float top = 88;
+            float top = NESTED_CONTENT_TOP;
             int count = settingsRowCount();
             for (int i = 0; i < count; i++) {
                 drawSettingRow(canvas, i, top);
@@ -268,9 +309,9 @@ public final class MainActivity extends Activity {
             int[] values = pickerValues();
             int selected = currentNumericValue();
             canvas.save();
-            canvas.clipRect(0, 78, BASE, 456);
+            canvas.clipRect(0, NESTED_HEADER_BOTTOM, BASE, 456);
             canvas.translate(0, -scrollOffset);
-            float top = 88;
+            float top = NESTED_CONTENT_TOP;
             for (int value : values) {
                 boolean active = value == selected;
                 rounded(canvas, 40, top, 426, top + PICKER_HEIGHT, 38,
@@ -306,12 +347,12 @@ public final class MainActivity extends Activity {
         private void drawBackHeader(Canvas canvas, String title, String subtitle) {
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(background);
-            canvas.drawRect(0, 0, BASE, 78, paint);
-            circleButton(canvas, 54, 40, 25, "‹", panelLight, Color.WHITE, 30);
-            text(canvas, title, 94, subtitle.isEmpty() ? 47 : 36,
+            canvas.drawRect(0, 0, BASE, NESTED_HEADER_BOTTOM, paint);
+            circleButton(canvas, 92, 70, 22, "‹", panelLight, Color.WHITE, 28);
+            text(canvas, title, 126, subtitle.isEmpty() ? 78 : 66,
                     subtitle.isEmpty() ? 23 : 20, Color.WHITE, Paint.Align.LEFT, true);
             if (!subtitle.isEmpty()) {
-                text(canvas, subtitle, 94, 57, 12, green, Paint.Align.LEFT, true);
+                text(canvas, subtitle, 126, 87, 12, green, Paint.Align.LEFT, true);
             }
         }
 
@@ -380,7 +421,8 @@ public final class MainActivity extends Activity {
             if (scrollMax <= 0) {
                 return;
             }
-            float position = 93 + (scrollOffset / scrollMax) * 332;
+            float start = screen == Screen.HOME ? 93 : 112;
+            float position = start + (scrollOffset / scrollMax) * (425 - start);
             rounded(canvas, 450, position, 454, position + 28, 2,
                     Color.rgb(78, 104, 94));
         }
@@ -420,40 +462,107 @@ public final class MainActivity extends Activity {
 
         private void drawMatch(Canvas canvas) {
             State state = engine.state();
-            rounded(canvas, 39, 18, 427, 176, 46, Color.rgb(8, 34, 45));
-            rounded(canvas, 39, 298, 427, 448, 46, Color.rgb(43, 29, 10));
-            text(canvas, state.currentServer == Team.A ? "*  TEAM A" : "TEAM A",
-                    BASE / 2, 50, 16, teamA, Paint.Align.CENTER, true);
-            text(canvas, engine.score(Team.A), BASE / 2, 122, 70,
+            boolean flashing = scoreFlashTeam != null
+                    && SystemClock.uptimeMillis() < scoreFlashUntil;
+            int teamAFill = flashing && scoreFlashTeam == Team.A
+                    ? Color.rgb(10, 92, 121) : Color.rgb(8, 34, 45);
+            int teamBFill = flashing && scoreFlashTeam == Team.B
+                    ? Color.rgb(126, 83, 20) : Color.rgb(43, 29, 10);
+            rounded(canvas, 39, 18, 427, 176, 46, teamAFill);
+            rounded(canvas, 39, 298, 427, 448, 46, teamBFill);
+
+            text(canvas, scoreHint(state, Team.A, flashing), BASE / 2, 42,
+                    15, flashing && scoreFlashTeam == Team.A ? Color.WHITE : muted,
+                    Paint.Align.CENTER, true);
+            text(canvas, engine.score(Team.A), BASE / 2, 126, 84,
                     Color.WHITE, Paint.Align.CENTER, true);
-            text(canvas, state.completed ? "FINISHED" : "+ POINT", BASE / 2, 158,
-                    14, muted, Paint.Align.CENTER, true);
+            drawTeamHeader(canvas, Team.A, 160, 138, 168);
 
-            text(canvas, engine.modeLabel(), BASE / 2, 195, 16,
-                    green, Paint.Align.CENTER, true);
-            text(canvas, engine.detailLabel(), BASE / 2, 217, 13,
-                    muted, Paint.Align.CENTER, false);
-            text(canvas, engine.statusLabel(), BASE / 2, 237, 13,
-                    state.completed ? green : Color.WHITE, Paint.Align.CENTER, true);
-
-            smallButton(canvas, 28, 246, 128, 291, "UNDO",
-                    engine.canUndo() ? panelLight : panel,
-                    engine.canUndo() ? Color.WHITE : muted, 13);
-            smallButton(canvas, 136, 246, 236, 291, "MENU", green, background, 13);
-            if (state.mode == Mode.AMERICANO && state.completed) {
-                smallButton(canvas, 244, 246, 438, 291, "NEXT ROUND", green, background, 13);
+            String headline = state.completed ? engine.statusLabel()
+                    : state.inTieBreak ? "TIE-BREAK" : engine.modeLabel();
+            if (!state.completed && state.mode == Mode.AMERICANO) {
+                drawAmericanoStatusLine(canvas, state);
             } else {
-                smallButton(canvas, 244, 246, 438, 291,
-                        state.settings.trackServe ? "CHANGE SERVE" : "HISTORY",
-                        panelLight, Color.WHITE, 12);
+                text(canvas, headline, BASE / 2, 199, state.completed ? 19 : 17,
+                        green, Paint.Align.CENTER, true);
+                text(canvas, matchDetailLabel(state), BASE / 2, 222, 15,
+                        state.completed ? Color.WHITE : muted, Paint.Align.CENTER, true);
             }
 
-            text(canvas, state.currentServer == Team.B ? "*  TEAM B" : "TEAM B",
-                    BASE / 2, 326, 16, teamB, Paint.Align.CENTER, true);
-            text(canvas, engine.score(Team.B), BASE / 2, 393, 68,
+            smallButton(canvas, 28, 232, 151, 291, "UNDO",
+                    engine.canUndo() ? panelLight : panel,
+                    engine.canUndo() ? Color.WHITE : muted, 17);
+            smallButton(canvas, 158, 232, 281, 291, "MENU", green, background, 17);
+            if (state.mode == Mode.AMERICANO && state.completed) {
+                smallButton(canvas, 288, 232, 438, 291, "NEXT", green, background, 17);
+            } else {
+                smallButton(canvas, 288, 232, 438, 291,
+                        state.settings.trackServe ? "SERVE" : "HISTORY",
+                        panelLight, Color.WHITE, 16);
+            }
+
+            drawTeamHeader(canvas, Team.B, 327, 306, 336);
+            text(canvas, engine.score(Team.B), BASE / 2, 413, 84,
                     Color.WHITE, Paint.Align.CENTER, true);
-            text(canvas, state.completed ? "FINISHED" : "+ POINT", BASE / 2, 431,
-                    14, muted, Paint.Align.CENTER, true);
+            text(canvas, scoreHint(state, Team.B, flashing), BASE / 2, 440,
+                    15, flashing && scoreFlashTeam == Team.B ? Color.WHITE : muted,
+                    Paint.Align.CENTER, true);
+            if (flashing) {
+                postInvalidateOnAnimation();
+            } else if (scoreFlashTeam != null) {
+                scoreFlashTeam = null;
+            }
+        }
+
+        private void drawTeamHeader(Canvas canvas, Team team, float baseline,
+                                    float pillTop, float pillBottom) {
+            int color = team == Team.A ? teamA : teamB;
+            text(canvas, "TEAM " + team.name(), 78, baseline, 19,
+                    color, Paint.Align.LEFT, true);
+            if (engine.state().settings.trackServe && engine.state().currentServer == team) {
+                rounded(canvas, 314, pillTop, 400, pillBottom, 15, color);
+                text(canvas, "SERVE", 357, pillBottom - 8, 13,
+                        background, Paint.Align.CENTER, true);
+            }
+        }
+
+        private String scoreHint(State state, Team team, boolean flashing) {
+            if (state.completed) {
+                return "FINISHED";
+            }
+            if (flashing && scoreFlashTeam == team) {
+                return "+1 ADDED";
+            }
+            return "TAP +1";
+        }
+
+        private String matchDetailLabel(State state) {
+            if (state.mode == Mode.AMERICANO) {
+                int played = state.pointsA + state.pointsB;
+                int remaining = Math.max(0, state.settings.target - played);
+                return "ROUND " + state.roundNumber + "   ·   " + remaining + " LEFT";
+            }
+            return engine.detailLabel().replace("   ", "   ·   ");
+        }
+
+        private void drawAmericanoStatusLine(Canvas canvas, State state) {
+            int played = state.pointsA + state.pointsB;
+            int remaining = Math.max(0, state.settings.target - played);
+            String mode = engine.modeLabel();
+            String separator = "  ·  ";
+            String progress = "R" + state.roundNumber + separator + remaining + " LEFT";
+            float size = 17f;
+            paint.setTextSize(size);
+            paint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            float modeWidth = paint.measureText(mode);
+            float separatorWidth = paint.measureText(separator);
+            float progressWidth = paint.measureText(progress);
+            float x = (BASE - modeWidth - separatorWidth - progressWidth) / 2f;
+            text(canvas, mode, x, 211, size, green, Paint.Align.LEFT, true);
+            x += modeWidth;
+            text(canvas, separator, x, 211, size, muted, Paint.Align.LEFT, true);
+            x += separatorWidth;
+            text(canvas, progress, x, 211, size, Color.WHITE, Paint.Align.LEFT, true);
         }
 
         private void drawMenu(Canvas canvas) {
@@ -528,9 +637,12 @@ public final class MainActivity extends Activity {
                 recycleVelocityTracker();
                 velocityTracker = VelocityTracker.obtain();
                 velocityTracker.addMovement(event);
+                downX = x;
                 downY = y;
                 lastY = y;
                 dragging = false;
+                gestureDirectionLocked = false;
+                horizontalBackGesture = false;
                 touching = true;
                 touchX = x;
                 touchY = y;
@@ -541,15 +653,29 @@ public final class MainActivity extends Activity {
                 if (velocityTracker != null) {
                     velocityTracker.addMovement(event);
                 }
-                if (isScrollableScreen()) {
-                    if (!dragging && Math.abs(y - downY) * scale > touchSlop) {
-                        dragging = true;
+                float distanceX = x - downX;
+                float distanceY = y - downY;
+                float absoluteX = Math.abs(distanceX);
+                float absoluteY = Math.abs(distanceY);
+                if (!gestureDirectionLocked
+                        && Math.max(absoluteX, absoluteY) * scale > touchSlop) {
+                    if (screen != Screen.HOME && downX <= 280
+                            && distanceX > 0 && absoluteX > absoluteY * 1.25f) {
+                        horizontalBackGesture = true;
+                        gestureDirectionLocked = true;
+                        touching = false;
+                    } else if (absoluteY >= absoluteX) {
+                        gestureDirectionLocked = true;
+                        dragging = isScrollableScreen();
+                        touching = false;
+                    } else if (distanceX < 0 || downX > 280) {
+                        gestureDirectionLocked = true;
                         touching = false;
                     }
-                    if (dragging) {
-                        scrollOffset = clampScroll(scrollOffset - (y - lastY));
-                        invalidate();
-                    }
+                }
+                if (dragging) {
+                    scrollOffset = clampScroll(scrollOffset - (y - lastY));
+                    invalidate();
                 }
                 lastY = y;
                 return true;
@@ -557,6 +683,8 @@ public final class MainActivity extends Activity {
             if (action == MotionEvent.ACTION_CANCEL) {
                 touching = false;
                 dragging = false;
+                gestureDirectionLocked = false;
+                horizontalBackGesture = false;
                 recycleVelocityTracker();
                 invalidate();
                 return true;
@@ -566,7 +694,15 @@ public final class MainActivity extends Activity {
                 if (velocityTracker != null) {
                     velocityTracker.addMovement(event);
                 }
-                if (dragging && velocityTracker != null) {
+                if (horizontalBackGesture) {
+                    float distanceX = x - downX;
+                    float distanceY = Math.abs(y - downY);
+                    if (distanceX >= BACK_SWIPE_DISTANCE
+                            && distanceX > distanceY * 1.25f) {
+                        buzz(22);
+                        handleBack();
+                    }
+                } else if (dragging && velocityTracker != null) {
                     velocityTracker.computeCurrentVelocity(1000, maximumFlingVelocity);
                     float velocityY = velocityTracker.getYVelocity();
                     if (Math.abs(velocityY) >= minimumFlingVelocity) {
@@ -575,10 +711,12 @@ public final class MainActivity extends Activity {
                                 0, Math.round(scrollMax));
                         postInvalidateOnAnimation();
                     }
-                } else {
+                } else if (!gestureDirectionLocked) {
                     handleTap(x, y);
                 }
                 dragging = false;
+                gestureDirectionLocked = false;
+                horizontalBackGesture = false;
                 recycleVelocityTracker();
                 invalidate();
                 return true;
@@ -661,7 +799,7 @@ public final class MainActivity extends Activity {
             if (hasSavedMatch()) {
                 if (inside(x, contentY, 32, top, 434, top + ROW_HEIGHT)) {
                     showScreen(Screen.MATCH);
-                    keepAwake(!engine.state().completed);
+                    keepAwake(true);
                     return;
                 }
                 top += ROW_STEP;
@@ -682,15 +820,15 @@ public final class MainActivity extends Activity {
         }
 
         private void handleSettingsTap(float x, float y) {
-            if (inside(x, y, 24, 8, 96, 76)) {
+            if (inside(x, y, 58, 38, 126, 100)) {
                 showScreen(Screen.HOME);
                 return;
             }
-            if (y < 78) {
+            if (y < NESTED_HEADER_BOTTOM) {
                 return;
             }
             float contentY = y + scrollOffset;
-            float firstRow = 88;
+            float firstRow = NESTED_CONTENT_TOP;
             int count = settingsRowCount();
             int index = (int) ((contentY - firstRow) / ROW_STEP);
             float rowTop = firstRow + index * ROW_STEP;
@@ -712,21 +850,21 @@ public final class MainActivity extends Activity {
                 engine = new MatchEngine(editing.mode, editing);
                 store.save(engine);
                 showScreen(Screen.MATCH);
-                keepAwake(!engine.state().completed);
+                keepAwake(true);
             }
         }
 
         private void handlePickerTap(float x, float y) {
-            if (inside(x, y, 24, 8, 96, 76)) {
+            if (inside(x, y, 58, 38, 126, 100)) {
                 returnToSettings();
                 return;
             }
-            if (y < 78) {
+            if (y < NESTED_HEADER_BOTTOM) {
                 return;
             }
             float contentY = y + scrollOffset;
-            int index = (int) ((contentY - 88) / PICKER_STEP);
-            float rowTop = 88 + index * PICKER_STEP;
+            int index = (int) ((contentY - NESTED_CONTENT_TOP) / PICKER_STEP);
+            float rowTop = NESTED_CONTENT_TOP + index * PICKER_STEP;
             int[] values = pickerValues();
             if (index >= 0 && index < values.length
                     && inside(x, contentY, 40, rowTop, 426, rowTop + PICKER_HEIGHT)) {
@@ -745,20 +883,21 @@ public final class MainActivity extends Activity {
                 addPoint(Team.B);
                 return;
             }
-            if (inside(x, y, 28, 241, 128, 296)) {
+            if (inside(x, y, 28, 228, 151, 296)) {
                 if (engine.undo()) {
                     store.save(engine);
-                    keepAwake(!engine.state().completed);
+                    keepAwake(true);
+                    scoreFlashTeam = null;
                     buzz(18);
                 }
                 return;
             }
-            if (inside(x, y, 136, 241, 236, 296)) {
+            if (inside(x, y, 158, 228, 281, 296)) {
                 screen = Screen.MENU;
                 keepAwake(false);
                 return;
             }
-            if (inside(x, y, 244, 241, 438, 296)) {
+            if (inside(x, y, 288, 228, 438, 296)) {
                 State state = engine.state();
                 if (state.mode == Mode.AMERICANO && state.completed) {
                     if (engine.startNextRound()) {
@@ -781,10 +920,10 @@ public final class MainActivity extends Activity {
             MatchEngine.Result result = engine.point(team);
             if (result.accepted) {
                 store.save(engine);
+                scoreFlashTeam = team;
+                scoreFlashUntil = SystemClock.uptimeMillis() + SCORE_FLASH_MILLISECONDS;
                 buzz(result.completedNow ? 120 : 35);
-                if (result.completedNow) {
-                    keepAwake(false);
-                }
+                keepAwake(true);
             }
         }
 
@@ -799,13 +938,13 @@ public final class MainActivity extends Activity {
             }
             if (index == 0) {
                 screen = Screen.MATCH;
-                keepAwake(!engine.state().completed);
+                keepAwake(true);
             } else if (index == 1) {
                 engine.changeServer();
                 store.save(engine);
                 buzz(18);
                 screen = Screen.MATCH;
-                keepAwake(!engine.state().completed);
+                keepAwake(true);
             } else if (index == 2) {
                 returnFromHistory = Screen.MENU;
                 screen = Screen.HISTORY;
@@ -819,7 +958,7 @@ public final class MainActivity extends Activity {
         private void handleHistoryTap(float x, float y) {
             if (inside(x, y, 65, 352, 224, 421)) {
                 screen = returnFromHistory;
-                keepAwake(screen == Screen.MATCH && !engine.state().completed);
+                keepAwake(screen == Screen.MATCH);
             } else if (inside(x, y, 242, 352, 401, 421)
                     && !engine.state().roundHistory.isEmpty()) {
                 screen = Screen.CONFIRM_CLEAR;
@@ -863,10 +1002,10 @@ public final class MainActivity extends Activity {
                 keepAwake(false);
             } else if (screen == Screen.MENU) {
                 showScreen(Screen.MATCH);
-                keepAwake(!engine.state().completed);
+                keepAwake(true);
             } else if (screen == Screen.HISTORY) {
                 showScreen(returnFromHistory);
-                keepAwake(screen == Screen.MATCH && !engine.state().completed);
+                keepAwake(screen == Screen.MATCH);
             } else if (screen == Screen.CONFIRM_CLEAR) {
                 showScreen(Screen.HISTORY);
             } else {
@@ -1067,6 +1206,8 @@ public final class MainActivity extends Activity {
             scrollOffset = 0;
             scrollMax = 0;
             dragging = false;
+            gestureDirectionLocked = false;
+            horizontalBackGesture = false;
         }
 
         private void setScrollBounds(float contentBottom) {

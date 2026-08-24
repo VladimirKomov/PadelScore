@@ -185,10 +185,8 @@
     </div>
 
     <div class="match-center">
-      <text if="{{showGames}}" class="detail-line">{{ $t('strings.setsShort') }} {{setsA}}:{{setsB}} · {{ $t('strings.gamesShort') }} {{gamesA}}:{{gamesB}}</text>
-      <text if="{{showRemaining}}" class="detail-line">{{playedPoints}} {{ $t('strings.played') }} · {{remainingPoints}} {{ $t('strings.left') }} · {{progressPercent}}%</text>
+      <text class="match-info-line {{matchInfoClass}}">{{matchInfoText}}</text>
       <text if="{{showServer}}" class="server-line" onclick="changeServer">{{ $t('strings.serve') }} · TEAM {{currentServer}}</text>
-      <text class="status-line {{statusClass}}">{{statusText}}</text>
     </div>
 
     <div class="score-card team-b {{completedClass}}" onclick="scoreB">

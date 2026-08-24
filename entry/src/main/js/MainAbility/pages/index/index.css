@@ -368,6 +368,14 @@ switch {
   text-align: center;
 }
 
+.match-info-line {
+  width: 100%;
+  color: #f0f3f8;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .server-line {
   width: 100%;
   color: #ffcb45;
@@ -384,6 +392,7 @@ switch {
   text-align: center;
 }
 
+.match-info-finished { color: #7cff9b; }
 .finished-status { color: #7cff9b; }
 
 .footer-row {

@@ -63,6 +63,8 @@ export default {
     progressPercent: 0,
     showServer: true,
     currentServer: 'A',
+    matchInfoText: 'AM24 · R1 · 24 LEFT',
+    matchInfoClass: '',
     statusText: 'IN PLAY',
     statusClass: '',
     completedClass: '',
@@ -151,6 +153,42 @@ export default {
     return this.$t('strings.americano') + ' ' + String(settings.totalPoints);
   },
 
+  compactModeLabel(mode, settings) {
+    if (mode === 'classic') return 'CLASS';
+    if (mode === 'single_set') return '1SET';
+    if (mode === 'tie_break') return 'TB' + String(settings.target);
+    if (mode === 'super_tie_break') return 'STB' + String(settings.target);
+    if (mode === 'race_to_n') return 'RACE' + String(settings.target);
+    return 'AM' + String(settings.totalPoints);
+  },
+
+  compactMatchInfo(state, presentation) {
+    const mode = this.compactModeLabel(state.mode, state.settings);
+    if (presentation.completed) {
+      const result = presentation.winner === 'draw'
+        ? 'DRAW'
+        : String(presentation.winner) + ' WINS';
+      return mode + ' · ' + result;
+    }
+    if ((state.mode === 'classic' || state.mode === 'single_set')
+        && presentation.tieBreak) {
+      return mode + ' · TB · S' + presentation.setsA + ':' + presentation.setsB
+        + ' · G' + presentation.gamesA + ':' + presentation.gamesB;
+    }
+    if (state.mode === 'classic') {
+      return mode + ' · S' + presentation.setsA + ':' + presentation.setsB
+        + ' · G' + presentation.gamesA + ':' + presentation.gamesB;
+    }
+    if (state.mode === 'single_set') {
+      return mode + ' · G' + presentation.gamesA + ':' + presentation.gamesB;
+    }
+    if (state.mode === 'americano') {
+      return mode + ' · R' + state.roundNumber + ' · '
+        + presentation.remainingPoints + ' LEFT';
+    }
+    return mode + ' · ' + presentation.remainingPoints + ' LEFT';
+  },
+
   renderEngine() {
     const state = engine.state;
     const presentation = engine.presentation;
@@ -170,6 +208,8 @@ export default {
     this.currentServer = presentation.currentServer;
     this.completedClass = presentation.completed ? 'complete-card' : '';
     this.statusClass = presentation.completed ? 'finished-status' : '';
+    this.matchInfoText = this.compactMatchInfo(state, presentation);
+    this.matchInfoClass = presentation.completed ? 'match-info-finished' : '';
     if (presentation.completed) {
       this.statusText = presentation.winner === 'draw'
         ? this.$t('strings.roundDraw')

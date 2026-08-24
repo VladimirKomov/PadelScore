@@ -478,16 +478,7 @@ public final class MainActivity extends Activity {
                     Color.WHITE, Paint.Align.CENTER, true);
             drawTeamHeader(canvas, Team.A, 160, 138, 168);
 
-            String headline = state.completed ? engine.statusLabel()
-                    : state.inTieBreak ? "TIE-BREAK" : engine.modeLabel();
-            if (!state.completed && state.mode == Mode.AMERICANO) {
-                drawAmericanoStatusLine(canvas, state);
-            } else {
-                text(canvas, headline, BASE / 2, 199, state.completed ? 19 : 17,
-                        green, Paint.Align.CENTER, true);
-                text(canvas, matchDetailLabel(state), BASE / 2, 222, 15,
-                        state.completed ? Color.WHITE : muted, Paint.Align.CENTER, true);
-            }
+            drawMatchInfoLine(canvas, state);
 
             smallButton(canvas, 28, 232, 151, 291, "UNDO",
                     engine.canUndo() ? panelLight : panel,
@@ -536,33 +527,64 @@ public final class MainActivity extends Activity {
             return "TAP +1";
         }
 
-        private String matchDetailLabel(State state) {
-            if (state.mode == Mode.AMERICANO) {
-                int played = state.pointsA + state.pointsB;
-                int remaining = Math.max(0, state.settings.target - played);
-                return "ROUND " + state.roundNumber + "   ·   " + remaining + " LEFT";
-            }
-            return engine.detailLabel().replace("   ", "   ·   ");
-        }
-
-        private void drawAmericanoStatusLine(Canvas canvas, State state) {
-            int played = state.pointsA + state.pointsB;
-            int remaining = Math.max(0, state.settings.target - played);
-            String mode = engine.modeLabel();
+        private void drawMatchInfoLine(Canvas canvas, State state) {
+            String mode = compactMatchMode(state);
             String separator = "  ·  ";
-            String progress = "R" + state.roundNumber + separator + remaining + " LEFT";
-            float size = 17f;
-            paint.setTextSize(size);
+            String status = compactMatchStatus(state);
+            float size = 21f;
             paint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            paint.setTextSize(size);
+            while (size > 19f && paint.measureText(mode + separator + status) > 366f) {
+                size -= 1f;
+                paint.setTextSize(size);
+            }
+
             float modeWidth = paint.measureText(mode);
             float separatorWidth = paint.measureText(separator);
-            float progressWidth = paint.measureText(progress);
-            float x = (BASE - modeWidth - separatorWidth - progressWidth) / 2f;
-            text(canvas, mode, x, 211, size, green, Paint.Align.LEFT, true);
+            float statusWidth = paint.measureText(status);
+            float x = (BASE - modeWidth - separatorWidth - statusWidth) / 2f;
+            int modeColor = state.completed ? muted : green;
+            int statusColor = state.completed ? green : Color.WHITE;
+            text(canvas, mode, x, 211, size, modeColor, Paint.Align.LEFT, true);
             x += modeWidth;
             text(canvas, separator, x, 211, size, muted, Paint.Align.LEFT, true);
             x += separatorWidth;
-            text(canvas, progress, x, 211, size, Color.WHITE, Paint.Align.LEFT, true);
+            text(canvas, status, x, 211, size, statusColor, Paint.Align.LEFT, true);
+        }
+
+        private String compactMatchMode(State state) {
+            if (state.mode == Mode.CLASSIC) return "CLASS";
+            if (state.mode == Mode.SINGLE_SET) return "1SET";
+            if (state.mode == Mode.TIE_BREAK) return "TB" + state.settings.target;
+            if (state.mode == Mode.SUPER_TIE_BREAK) return "STB" + state.settings.target;
+            if (state.mode == Mode.RACE_TO_N) return "RACE" + state.settings.target;
+            return "AM" + state.settings.target;
+        }
+
+        private String compactMatchStatus(State state) {
+            if (state.completed) {
+                return "DRAW".equals(state.winner) ? "DRAW" : state.winner + " WINS";
+            }
+            if ((state.mode == Mode.CLASSIC || state.mode == Mode.SINGLE_SET)
+                    && state.inTieBreak) {
+                return "TB  ·  S" + state.setsA + ":" + state.setsB
+                        + "  ·  G" + state.gamesA + ":" + state.gamesB;
+            }
+            if (state.mode == Mode.CLASSIC) {
+                return "S" + state.setsA + ":" + state.setsB
+                        + "  ·  G" + state.gamesA + ":" + state.gamesB;
+            }
+            if (state.mode == Mode.SINGLE_SET) {
+                return "G" + state.gamesA + ":" + state.gamesB;
+            }
+            if (state.mode == Mode.AMERICANO) {
+                int played = state.pointsA + state.pointsB;
+                int remaining = Math.max(0, state.settings.target - played);
+                return "R" + state.roundNumber + "  ·  " + remaining + " LEFT";
+            }
+            int remaining = Math.max(0,
+                    state.settings.target - Math.max(state.pointsA, state.pointsB));
+            return remaining + " LEFT";
         }
 
         private void drawMenu(Canvas canvas) {

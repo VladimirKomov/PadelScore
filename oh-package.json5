@@ -1,6 +1,6 @@
 {
   "name": "padelscore",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Offline padel scoring for a round wearable display",
   "main": "",
   "author": "vekom",
@@ -10,4 +10,3 @@
     "@ohos/hypium": "1.0.6"
   }
 }
-

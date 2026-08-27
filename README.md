@@ -5,10 +5,21 @@ PadelScore помогает вести счёт, отслеживать пода
 и продолжать матч после закрытия приложения. Интернет и телефон во время игры
 не требуются.
 
-<p align="center">
-  <img src="docs/images/padelscore-home.png" width="280" alt="Главное меню PadelScore">
-  <img src="docs/images/padelscore-match.png" width="280" alt="Экран счёта PadelScore">
-</p>
+## Скриншоты
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/padelscore-home.png" width="250" alt="Выбор формата матча"><br><sub>Выбор формата матча</sub></td>
+    <td align="center"><img src="docs/images/padelscore-settings.png" width="250" alt="Настройки матча"><br><sub>Настройки матча</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/padelscore-value-picker.png" width="250" alt="Выбор значения"><br><sub>Выбор значения</sub></td>
+    <td align="center"><img src="docs/images/padelscore-match.png" width="250" alt="Экран счёта"><br><sub>Экран счёта</sub></td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2"><img src="docs/images/padelscore-menu.png" width="250" alt="Меню текущего матча"><br><sub>Меню текущего матча</sub></td>
+  </tr>
+</table>
 
 ## Возможности
 

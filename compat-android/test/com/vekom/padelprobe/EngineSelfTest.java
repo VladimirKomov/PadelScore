@@ -1,6 +1,8 @@
 package com.vekom.padelprobe;
 
 import static com.vekom.padelprobe.MatchModel.Mode;
+import static com.vekom.padelprobe.MatchModel.GameScoring;
+import static com.vekom.padelprobe.MatchModel.SetEnding;
 import static com.vekom.padelprobe.MatchModel.Settings;
 import static com.vekom.padelprobe.MatchModel.State;
 import static com.vekom.padelprobe.MatchModel.Team;
@@ -12,8 +14,12 @@ public final class EngineSelfTest {
     public static void main(String[] args) {
         classicGame();
         classicAdvantageAndUndo();
+        starPoint();
         classicTieBreak();
+        classicServeRotationAndUndo();
+        classicTieBreakServeRotation();
         goldenPoint();
+        setEndingModes();
         singleSetCompletes();
         tieBreakWinByTwo();
         superTieBreak();
@@ -33,13 +39,16 @@ public final class EngineSelfTest {
     }
 
     private static void classicAdvantageAndUndo() {
-        MatchEngine engine = engine(Mode.CLASSIC);
+        Settings settings = Settings.defaults(Mode.CLASSIC);
+        settings.gameScoring = GameScoring.ADVANTAGE;
+        MatchEngine engine = new MatchEngine(Mode.CLASSIC, settings);
         points(engine, Team.A, 3);
         points(engine, Team.B, 3);
         point(engine, Team.A);
         eq("AD", engine.score(Team.A), "advantage is shown");
         point(engine, Team.B);
         eq("40", engine.score(Team.A), "opponent returns score to deuce");
+        eq("DEUCE", engine.statusLabel(), "advantage mode uses ordinary deuce label");
         point(engine, Team.A);
         point(engine, Team.A);
         eq(1, engine.state().gamesA, "two clear points win from deuce");
@@ -49,7 +58,7 @@ public final class EngineSelfTest {
 
     private static void goldenPoint() {
         Settings settings = Settings.defaults(Mode.CLASSIC);
-        settings.goldenPoint = true;
+        settings.gameScoring = GameScoring.GOLDEN;
         MatchEngine engine = new MatchEngine(Mode.CLASSIC, settings);
         points(engine, Team.A, 3);
         points(engine, Team.B, 3);
@@ -57,10 +66,28 @@ public final class EngineSelfTest {
         eq(1, engine.state().gamesB, "golden point wins immediately at deuce");
     }
 
+    private static void starPoint() {
+        Settings settings = Settings.defaults(Mode.CLASSIC);
+        settings.gameScoring = GameScoring.STAR;
+        MatchEngine engine = new MatchEngine(Mode.CLASSIC, settings);
+        points(engine, Team.A, 3);
+        points(engine, Team.B, 3);
+        eq("DEUCE 1", engine.statusLabel(), "first deuce is identified");
+        point(engine, Team.A);
+        eq("ADV A", engine.statusLabel(), "first advantage is identified");
+        point(engine, Team.B);
+        eq("DEUCE 2", engine.statusLabel(), "second deuce is identified");
+        point(engine, Team.B);
+        point(engine, Team.A);
+        yes(engine.isStarPoint(), "third deuce becomes Star Point");
+        eq("STAR POINT", engine.statusLabel(), "Star Point is visible");
+        point(engine, Team.B);
+        eq(1, engine.state().gamesB, "Star Point winner receives the game");
+    }
+
     private static void classicTieBreak() {
         Settings settings = Settings.defaults(Mode.CLASSIC);
         settings.gamesPerSet = 1;
-        settings.tieBreakAt = 1;
         settings.setsToWin = 1;
         MatchEngine engine = new MatchEngine(Mode.CLASSIC, settings);
         points(engine, Team.A, 4);
@@ -76,10 +103,34 @@ public final class EngineSelfTest {
         eq("A", engine.state().winner, "classic tie-break awards the set");
     }
 
+    private static void setEndingModes() {
+        Settings leadSettings = Settings.defaults(Mode.CLASSIC);
+        leadSettings.gamesPerSet = 1;
+        leadSettings.setsToWin = 1;
+        leadSettings.setEnding = SetEnding.TWO_GAME_LEAD;
+        MatchEngine lead = new MatchEngine(Mode.CLASSIC, leadSettings);
+        points(lead, Team.A, 4);
+        points(lead, Team.B, 4);
+        no(lead.state().inTieBreak, "two-game lead does not start a tie-break");
+        no(lead.state().completed, "one-game margin does not finish two-game lead set");
+        points(lead, Team.A, 8);
+        yes(lead.state().completed, "two-game margin finishes the set");
+
+        Settings firstSettings = Settings.defaults(Mode.CLASSIC);
+        firstSettings.gamesPerSet = 2;
+        firstSettings.setsToWin = 1;
+        firstSettings.setEnding = SetEnding.FIRST_TO;
+        MatchEngine first = new MatchEngine(Mode.CLASSIC, firstSettings);
+        points(first, Team.A, 4);
+        points(first, Team.B, 4);
+        points(first, Team.A, 4);
+        yes(first.state().completed, "first-to set can finish with one-game margin");
+    }
+
     private static void singleSetCompletes() {
         Settings settings = Settings.defaults(Mode.SINGLE_SET);
         settings.gamesPerSet = 1;
-        settings.winSetByTwo = false;
+        settings.setEnding = SetEnding.FIRST_TO;
         MatchEngine engine = new MatchEngine(Mode.SINGLE_SET, settings);
         points(engine, Team.B, 4);
         yes(engine.state().completed, "single set completes after one configured game");
@@ -150,6 +201,91 @@ public final class EngineSelfTest {
                 "session total carries to next round");
         eq(0, engine.state().pointsA + engine.state().pointsB,
                 "next round begins at zero");
+    }
+    private static void classicServeRotationAndUndo() {
+        Settings settings = Settings.defaults(Mode.CLASSIC);
+        yes(settings.trackServe, "Classic tracks serve by default");
+        yes(Settings.defaults(Mode.SINGLE_SET).trackServe,
+                "Single Set tracks serve by default");
+        MatchEngine engine = new MatchEngine(Mode.CLASSIC, settings);
+        points(engine, Team.A, 4);
+        eq(1, engine.state().gamesA, "completed game is recorded");
+        eq(Team.B, engine.state().currentServer,
+                "serve changes after a completed Classic game");
+        yes(engine.undo(), "completed game can be undone");
+        eq(0, engine.state().gamesA, "undo restores game count");
+        eq(Team.A, engine.state().currentServer, "undo restores server");
+
+        settings.trackServe = false;
+        MatchEngine disabled = new MatchEngine(Mode.CLASSIC, settings);
+        points(disabled, Team.A, 4);
+        eq(Team.A, disabled.state().currentServer,
+                "disabled tracking leaves the server unchanged");
+    }
+
+    private static void classicTieBreakServeRotation() {
+        Settings settings = Settings.defaults(Mode.CLASSIC);
+        settings.gamesPerSet = 1;
+        settings.setsToWin = 2;
+        settings.tieBreakTarget = 3;
+        settings.trackServe = true;
+        settings.startingServer = Team.A;
+        MatchEngine engine = new MatchEngine(Mode.CLASSIC, settings);
+
+        points(engine, Team.A, 4);
+        eq(Team.B, engine.state().currentServer, "B serves the second game");
+        points(engine, Team.B, 4);
+        yes(engine.state().inTieBreak, "tie-break starts at the configured score");
+        eq(Team.A, engine.state().currentServer, "A starts the tie-break");
+        eq(Team.A, engine.state().tieBreakStartingServer,
+                "tie-break starter is remembered");
+
+        engine.changeServer();
+        eq(Team.B, engine.state().currentServer,
+                "manual correction changes the tie-break starter");
+        eq(Team.B, engine.state().tieBreakStartingServer,
+                "corrected tie-break starter is remembered");
+        yes(engine.undo(), "manual correction can be undone");
+        eq(Team.A, engine.state().currentServer,
+                "undo restores tie-break current server");
+        eq(Team.A, engine.state().tieBreakStartingServer,
+                "undo restores tie-break starter");
+
+        point(engine, Team.A);
+        eq(Team.B, engine.state().currentServer, "serve changes after tie-break point one");
+        point(engine, Team.A);
+        eq(Team.B, engine.state().currentServer, "server keeps the second point");
+        engine.changeServer();
+        eq(Team.A, engine.state().currentServer,
+                "mid-tie-break correction changes the current server");
+        eq(Team.B, engine.state().tieBreakStartingServer,
+                "mid-tie-break correction infers the actual starter");
+        yes(engine.undo(), "mid-tie-break correction can be undone");
+        eq(Team.B, engine.state().currentServer,
+                "undo restores current server after point two");
+        eq(Team.A, engine.state().tieBreakStartingServer,
+                "undo restores starter after point two");
+
+        point(engine, Team.B);
+        eq(Team.A, engine.state().currentServer, "serve changes after point three");
+        point(engine, Team.B);
+        eq(Team.A, engine.state().currentServer, "server keeps the fourth point");
+        point(engine, Team.A);
+        eq(Team.B, engine.state().currentServer, "serve changes after point five");
+        point(engine, Team.A);
+
+        no(engine.state().inTieBreak, "winning tie-break closes the set");
+        eq(1, engine.state().setsA, "tie-break winner receives the set");
+        eq(Team.B, engine.state().currentServer,
+                "opposite team serves first in the next set");
+        yes(engine.undo(), "tie-break completion can be undone");
+        yes(engine.state().inTieBreak, "undo returns to the tie-break");
+        eq(3, engine.state().tieBreakPointsA, "undo restores tie-break score A");
+        eq(2, engine.state().tieBreakPointsB, "undo restores tie-break score B");
+        eq(Team.A, engine.state().tieBreakStartingServer,
+                "undo restores remembered tie-break starter");
+        eq(Team.B, engine.state().currentServer,
+                "undo restores current tie-break server");
     }
 
     private static void changeServerUndo() {

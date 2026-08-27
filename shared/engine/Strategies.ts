@@ -43,6 +43,22 @@ function winnerStatus(winner: Winner): string {
   return winner === null ? 'IN PLAY' : `TEAM ${winner} WINS`;
 }
 
+function classicGameStatus(state: MatchState, settings: ClassicSettings): string {
+  if (state.inTieBreak) {
+    return 'TIE-BREAK';
+  }
+  if (state.pointsA === state.pointsB && state.pointsA >= 3) {
+    if (settings.gameScoring === 'star') {
+      return state.pointsA >= 5 ? 'STAR POINT' : `DEUCE ${state.pointsA - 2}`;
+    }
+    return 'DEUCE';
+  }
+  if (Math.abs(state.pointsA - state.pointsB) === 1 && Math.min(state.pointsA, state.pointsB) >= 3) {
+    return `ADV ${state.pointsA > state.pointsB ? 'A' : 'B'}`;
+  }
+  return 'IN PLAY';
+}
+
 function basePresentation(
   state: MatchState,
   canUndo: boolean,
@@ -88,7 +104,15 @@ export class ClassicScoringStrategy implements ScoringStrategy {
         true
       );
       if (winner !== null && winner !== 'draw') {
+        if (settings.trackServe && state.tieBreakStartingServer !== null) {
+          state.currentServer = otherTeam(state.tieBreakStartingServer);
+        }
         this.awardSet(state, winner, settings);
+      } else if (settings.trackServe) {
+        const played = state.tieBreakPointsA + state.tieBreakPointsB;
+        if (played === 1 || played % 2 === 1) {
+          state.currentServer = otherTeam(state.currentServer);
+        }
       }
       return;
     }
@@ -101,11 +125,14 @@ export class ClassicScoringStrategy implements ScoringStrategy {
       state.pointsB += 1;
     }
 
+    const tiedBeforePoint = beforeA === beforeB;
     const goldenDeuce =
-      settings.advantageMode === 'golden' && beforeA >= 3 && beforeB >= 3;
+      settings.gameScoring === 'golden' && tiedBeforePoint && beforeA >= 3;
+    const starPoint =
+      settings.gameScoring === 'star' && tiedBeforePoint && beforeA >= 5;
     const own = team === 'A' ? state.pointsA : state.pointsB;
     const opponent = team === 'A' ? state.pointsB : state.pointsA;
-    const gameWon = goldenDeuce || (own >= 4 && own - opponent >= 2);
+    const gameWon = goldenDeuce || starPoint || (own >= 4 && own - opponent >= 2);
     if (gameWon) {
       this.awardGame(state, team, settings);
     }
@@ -119,22 +146,27 @@ export class ClassicScoringStrategy implements ScoringStrategy {
     } else {
       state.gamesB += 1;
     }
+    if (settings.trackServe) {
+      state.currentServer = otherTeam(state.currentServer);
+      state.pointsSinceServerChange = 0;
+    }
 
     if (
-      settings.tieBreakEnabled &&
-      state.gamesA === settings.tieBreakAt &&
-      state.gamesB === settings.tieBreakAt
+      settings.setEnding === 'tie_break' &&
+      state.gamesA === settings.gamesPerSet &&
+      state.gamesB === settings.gamesPerSet
     ) {
       state.inTieBreak = true;
       state.tieBreakPointsA = 0;
       state.tieBreakPointsB = 0;
+      state.tieBreakStartingServer = state.currentServer;
       return;
     }
 
     const ownGames = team === 'A' ? state.gamesA : state.gamesB;
     const opponentGames = team === 'A' ? state.gamesB : state.gamesA;
     const enoughGames = ownGames >= settings.gamesPerSet;
-    const enoughMargin = !settings.winSetByTwo || ownGames - opponentGames >= 2;
+    const enoughMargin = settings.setEnding === 'first_to' || ownGames - opponentGames >= 2;
     if (enoughGames && enoughMargin) {
       this.awardSet(state, team, settings);
     }
@@ -153,6 +185,7 @@ export class ClassicScoringStrategy implements ScoringStrategy {
     state.tieBreakPointsA = 0;
     state.tieBreakPointsB = 0;
     state.inTieBreak = false;
+    state.tieBreakStartingServer = null;
 
     const wonSets = team === 'A' ? state.setsA : state.setsB;
     if (wonSets >= settings.setsToWin) {
@@ -170,8 +203,8 @@ export class ClassicScoringStrategy implements ScoringStrategy {
       ? String(state.tieBreakPointsB)
       : pointLabel(state.pointsB, state.pointsA);
     const result = basePresentation(state, canUndo, label, scoreA, scoreB);
-    if (state.inTieBreak && !state.completed) {
-      result.status = 'TIE-BREAK';
+    if (!state.completed) {
+      result.status = classicGameStatus(state, state.settings as ClassicSettings);
     }
     return result;
   }

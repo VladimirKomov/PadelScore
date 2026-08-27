@@ -80,7 +80,7 @@ test('Classic: reaches 40:40 and displays deuce score', () => {
 });
 
 test('Classic: advantage, return to deuce and advantage victory', () => {
-  const engine = new MatchEngine('classic', classicSettings());
+  const engine = new MatchEngine('classic', classicSettings({ gameScoring: 'advantage' }));
   const clock = new TestClock();
   add(engine, 'A', 3, clock);
   add(engine, 'B', 3, clock);
@@ -89,12 +89,32 @@ test('Classic: advantage, return to deuce and advantage victory', () => {
   add(engine, 'B', 1, clock);
   assert.equal(engine.presentation.scoreA, '40');
   assert.equal(engine.presentation.scoreB, '40');
+  assert.equal(engine.presentation.status, 'DEUCE');
   add(engine, 'B', 2, clock);
   assert.equal(engine.state.gamesB, 1);
 });
 
-test('Classic: Golden Point ends the game immediately after deuce', () => {
-  const settings = classicSettings({ advantageMode: 'golden' });
+test('Classic: Star Point follows two advantages and then decides the game', () => {
+  const settings = classicSettings({ gameScoring: 'star' });
+  const engine = new MatchEngine('classic', settings);
+  const clock = new TestClock();
+  add(engine, 'A', 3, clock);
+  add(engine, 'B', 3, clock);
+  assert.equal(engine.presentation.status, 'DEUCE 1');
+  add(engine, 'A', 1, clock);
+  assert.equal(engine.presentation.status, 'ADV A');
+  add(engine, 'B', 1, clock);
+  assert.equal(engine.presentation.status, 'DEUCE 2');
+  add(engine, 'B', 1, clock);
+  assert.equal(engine.presentation.status, 'ADV B');
+  add(engine, 'A', 1, clock);
+  assert.equal(engine.presentation.status, 'STAR POINT');
+  add(engine, 'B', 1, clock);
+  assert.equal(engine.state.gamesB, 1);
+});
+
+test('Classic: Golden Point ends the game immediately after first deuce', () => {
+  const settings = classicSettings({ gameScoring: 'golden' });
   const engine = new MatchEngine('classic', settings);
   const clock = new TestClock();
   add(engine, 'A', 3, clock);
@@ -107,7 +127,7 @@ test('Classic: set and match victory are detected', () => {
   const settings = classicSettings({
     gamesPerSet: 2,
     setsToWin: 1,
-    tieBreakEnabled: false
+    setEnding: 'two_game_lead'
   });
   const engine = new MatchEngine('classic', settings);
   const clock = new TestClock();
@@ -123,7 +143,6 @@ test('Classic: configured tie-break begins and decides the match', () => {
   const settings = classicSettings({
     gamesPerSet: 2,
     setsToWin: 1,
-    tieBreakAt: 2,
     tieBreakTarget: 3
   });
   const engine = new MatchEngine('classic', settings);
@@ -144,8 +163,7 @@ test('Classic: points are blocked after completion', () => {
   const settings = classicSettings({
     gamesPerSet: 1,
     setsToWin: 1,
-    winSetByTwo: false,
-    tieBreakEnabled: false
+    setEnding: 'first_to'
   });
   const engine = new MatchEngine('classic', settings);
   const clock = new TestClock();
@@ -160,14 +178,49 @@ test('Single Set: is an independent one-set mode', () => {
     mode: 'single_set',
     gamesPerSet: 1,
     setsToWin: 1,
-    winSetByTwo: false,
-    tieBreakEnabled: false
+    setEnding: 'first_to'
   });
   const engine = new MatchEngine('single_set', settings);
   const clock = new TestClock();
   add(engine, 'B', 4, clock);
   assert.equal(engine.state.winner, 'B');
   assert.equal(engine.presentation.modeLabel, 'SINGLE SET');
+});
+
+test('Classic: two-game lead has no tie-break and requires a two-game margin', () => {
+  const settings = classicSettings({
+    gamesPerSet: 2,
+    setsToWin: 1,
+    setEnding: 'two_game_lead',
+    gameScoring: 'golden'
+  });
+  const engine = new MatchEngine('classic', settings);
+  const clock = new TestClock();
+  for (let game = 0; game < 2; game += 1) {
+    add(engine, 'A', 4, clock);
+    add(engine, 'B', 4, clock);
+  }
+  assert.equal(engine.state.inTieBreak, false);
+  assert.equal(engine.state.completed, false);
+  add(engine, 'A', 8, clock);
+  assert.equal(engine.state.completed, true);
+  assert.equal(engine.state.winner, 'A');
+});
+
+test('Classic: first-to ending can finish with a one-game margin', () => {
+  const settings = classicSettings({
+    gamesPerSet: 2,
+    setsToWin: 1,
+    setEnding: 'first_to',
+    gameScoring: 'golden'
+  });
+  const engine = new MatchEngine('classic', settings);
+  const clock = new TestClock();
+  add(engine, 'A', 4, clock);
+  add(engine, 'B', 4, clock);
+  add(engine, 'A', 4, clock);
+  assert.equal(engine.state.completed, true);
+  assert.equal(engine.state.winner, 'A');
 });
 
 test('Tie-break: target 7 wins', () => {
@@ -334,6 +387,92 @@ test('Americano: automatic and manual serving changes', () => {
   assert.equal(engine.state.currentServer, 'A');
 });
 
+test('Classic: serve changes after each completed game and Undo restores it', () => {
+  const engine = new MatchEngine(
+    'classic',
+    classicSettings({ trackServe: true, startingServer: 'A' })
+  );
+  const clock = new TestClock();
+  add(engine, 'A', 4, clock);
+  assert.equal(engine.state.gamesA, 1);
+  assert.equal(engine.state.currentServer, 'B');
+  engine.undo();
+  assert.equal(engine.state.gamesA, 0);
+  assert.equal(engine.state.currentServer, 'A');
+});
+
+test('Classic: disabled serve tracking leaves the selected server unchanged', () => {
+  const engine = new MatchEngine(
+    'classic',
+    classicSettings({ trackServe: false, startingServer: 'A' })
+  );
+  const clock = new TestClock();
+  add(engine, 'A', 4, clock);
+  assert.equal(engine.state.currentServer, 'A');
+});
+
+test('Classic: tie-break follows 1-2-2 service order and sets the next-set server', () => {
+  const engine = new MatchEngine(
+    'classic',
+    classicSettings({
+      gamesPerSet: 1,
+      setsToWin: 2,
+      tieBreakTarget: 3,
+      trackServe: true,
+      startingServer: 'A'
+    })
+  );
+  const clock = new TestClock();
+  add(engine, 'A', 4, clock);
+  assert.equal(engine.state.currentServer, 'B');
+  add(engine, 'B', 4, clock);
+  assert.equal(engine.state.inTieBreak, true);
+  assert.equal(engine.state.currentServer, 'A');
+  assert.equal(engine.state.tieBreakStartingServer, 'A');
+
+  engine.dispatch({ type: 'ChangeServer' });
+  assert.equal(engine.state.currentServer, 'B');
+  assert.equal(engine.state.tieBreakStartingServer, 'B');
+  engine.undo();
+  assert.equal(engine.state.currentServer, 'A');
+  assert.equal(engine.state.tieBreakStartingServer, 'A');
+
+  add(engine, 'A', 1, clock);
+  assert.equal(engine.state.currentServer, 'B');
+  add(engine, 'A', 1, clock);
+  assert.equal(engine.state.currentServer, 'B');
+  engine.dispatch({ type: 'ChangeServer' });
+  assert.equal(engine.state.currentServer, 'A');
+  assert.equal(engine.state.tieBreakStartingServer, 'B');
+  engine.undo();
+  assert.equal(engine.state.currentServer, 'B');
+  assert.equal(engine.state.tieBreakStartingServer, 'A');
+
+  add(engine, 'B', 1, clock);
+  assert.equal(engine.state.currentServer, 'A');
+  add(engine, 'B', 1, clock);
+  assert.equal(engine.state.currentServer, 'A');
+  add(engine, 'A', 1, clock);
+  assert.equal(engine.state.currentServer, 'B');
+
+  const restored = MatchEngine.restore(engine.serialize(), 'americano');
+  assert.equal(restored.restored, true);
+  assert.equal(restored.engine.state.tieBreakStartingServer, 'A');
+  assert.equal(restored.engine.state.currentServer, 'B');
+
+  add(engine, 'A', 1, clock);
+  assert.equal(engine.state.inTieBreak, false);
+  assert.equal(engine.state.setsA, 1);
+  assert.equal(engine.state.currentServer, 'B');
+  engine.undo();
+  assert.equal(engine.state.inTieBreak, true);
+  assert.equal(engine.state.tieBreakPointsA, 3);
+  assert.equal(engine.state.tieBreakPointsB, 2);
+
+  assert.equal(engine.state.tieBreakStartingServer, 'A');
+  assert.equal(engine.state.currentServer, 'B');
+});
+
 test('General: multiple Undo operations restore consecutive states', () => {
   const engine = new MatchEngine('race_to_n', raceSettings({ target: 10 }));
   const clock = new TestClock();
@@ -398,6 +537,31 @@ test('Persistence: corrupt and incompatible saves fall back safely', () => {
   );
   assert.equal(incompatible.restored, false);
   assert.match(incompatible.reason, /unsupported/);
+});
+
+test('Persistence: legacy Classic settings migrate without losing the score', () => {
+  const engine = new MatchEngine('classic', classicSettings({ gameScoring: 'advantage' }));
+  const clock = new TestClock();
+  add(engine, 'A', 2, clock);
+  const saved = JSON.parse(engine.serialize());
+  saved.state.settings = {
+    mode: 'classic',
+    gamesPerSet: 6,
+    setsToWin: 2,
+    winSetByTwo: true,
+    tieBreakEnabled: true,
+    tieBreakAt: 6,
+    tieBreakTarget: 7,
+    advantageMode: 'advantage',
+    trackServe: false,
+    startingServer: 'A'
+  };
+  const restored = MatchEngine.restore(JSON.stringify(saved), 'americano');
+  assert.equal(restored.restored, true);
+  assert.equal(restored.engine.state.pointsA, 2);
+  const settings = restored.engine.state.settings as ClassicSettings;
+  assert.equal(settings.gameScoring, 'advantage');
+  assert.equal(settings.setEnding, 'tie_break');
 });
 
 test('Input safety: rapid duplicate point is debounced', () => {

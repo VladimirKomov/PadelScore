@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.vekom.padelprobe.MatchModel.Mode;
+import static com.vekom.padelprobe.MatchModel.GameScoring;
+import static com.vekom.padelprobe.MatchModel.SetEnding;
 import static com.vekom.padelprobe.MatchModel.Settings;
 import static com.vekom.padelprobe.MatchModel.State;
 import static com.vekom.padelprobe.MatchModel.Team;
@@ -95,12 +97,10 @@ final class MatchStore {
         json.put("target", settings.target);
         json.put("gamesPerSet", settings.gamesPerSet);
         json.put("setsToWin", settings.setsToWin);
-        json.put("tieBreakAt", settings.tieBreakAt);
         json.put("tieBreakTarget", settings.tieBreakTarget);
         json.put("winByTwo", settings.winByTwo);
-        json.put("winSetByTwo", settings.winSetByTwo);
-        json.put("tieBreakEnabled", settings.tieBreakEnabled);
-        json.put("goldenPoint", settings.goldenPoint);
+        json.put("gameScoring", settings.gameScoring.name());
+        json.put("setEnding", settings.setEnding.name());
         json.put("trackServe", settings.trackServe);
         json.put("serveEvery", settings.serveEvery);
         json.put("startingServer", settings.startingServer.name());
@@ -116,12 +116,23 @@ final class MatchStore {
         settings.target = clamp(json.optInt("target", settings.target), 1, 99);
         settings.gamesPerSet = clamp(json.optInt("gamesPerSet", settings.gamesPerSet), 1, 12);
         settings.setsToWin = clamp(json.optInt("setsToWin", settings.setsToWin), 1, 3);
-        settings.tieBreakAt = clamp(json.optInt("tieBreakAt", settings.tieBreakAt), 1, 12);
         settings.tieBreakTarget = clamp(json.optInt("tieBreakTarget", settings.tieBreakTarget), 1, 30);
         settings.winByTwo = json.optBoolean("winByTwo", settings.winByTwo);
-        settings.winSetByTwo = json.optBoolean("winSetByTwo", settings.winSetByTwo);
-        settings.tieBreakEnabled = json.optBoolean("tieBreakEnabled", settings.tieBreakEnabled);
-        settings.goldenPoint = json.optBoolean("goldenPoint", settings.goldenPoint);
+        if (json.has("gameScoring")) {
+            settings.gameScoring = GameScoring.valueOf(json.getString("gameScoring"));
+        } else {
+            settings.gameScoring = json.optBoolean("goldenPoint", false)
+                    ? GameScoring.GOLDEN : GameScoring.ADVANTAGE;
+        }
+        if (json.has("setEnding")) {
+            settings.setEnding = SetEnding.valueOf(json.getString("setEnding"));
+        } else if (!json.optBoolean("winSetByTwo", true)) {
+            settings.setEnding = SetEnding.FIRST_TO;
+        } else if (!json.optBoolean("tieBreakEnabled", true)) {
+            settings.setEnding = SetEnding.TWO_GAME_LEAD;
+        } else {
+            settings.setEnding = SetEnding.TIE_BREAK;
+        }
         settings.trackServe = json.optBoolean("trackServe", settings.trackServe);
         settings.serveEvery = clamp(json.optInt("serveEvery", settings.serveEvery), 1, 16);
         settings.startingServer = Team.valueOf(
@@ -143,6 +154,8 @@ final class MatchStore {
         json.put("tieBreakPointsA", state.tieBreakPointsA);
         json.put("tieBreakPointsB", state.tieBreakPointsB);
         json.put("inTieBreak", state.inTieBreak);
+        json.put("tieBreakStartingServer", state.tieBreakStartingServer == null
+                ? JSONObject.NULL : state.tieBreakStartingServer.name());
         json.put("completed", state.completed);
         json.put("winner", state.winner == null ? JSONObject.NULL : state.winner);
         json.put("currentServer", state.currentServer.name());
@@ -181,6 +194,9 @@ final class MatchStore {
         state.tieBreakPointsA = nonNegative(json.optInt("tieBreakPointsA"));
         state.tieBreakPointsB = nonNegative(json.optInt("tieBreakPointsB"));
         state.inTieBreak = json.optBoolean("inTieBreak");
+        String tieBreakServer = json.optString("tieBreakStartingServer", "");
+        state.tieBreakStartingServer = "A".equals(tieBreakServer) ? Team.A
+                : "B".equals(tieBreakServer) ? Team.B : null;
         state.completed = json.optBoolean("completed");
         state.winner = json.isNull("winner") ? null : json.optString("winner", null);
         state.currentServer = Team.valueOf(json.optString("currentServer", "A"));

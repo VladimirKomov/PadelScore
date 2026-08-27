@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.vekom.padelprobe.MatchModel.Mode;
+import static com.vekom.padelprobe.MatchModel.GameScoring;
 import static com.vekom.padelprobe.MatchModel.Settings;
 import static com.vekom.padelprobe.MatchModel.State;
 import static com.vekom.padelprobe.MatchModel.Team;
@@ -92,6 +93,12 @@ final class MatchEngine {
     void changeServer() {
         history.add(state.copy());
         state.currentServer = state.currentServer.other();
+        if (state.inTieBreak) {
+            int played = state.tieBreakPointsA + state.tieBreakPointsB;
+            boolean currentIsStarter = played % 4 == 0 || played % 4 == 3;
+            state.tieBreakStartingServer = currentIsStarter
+                    ? state.currentServer : state.currentServer.other();
+        }
         state.pointsSinceServerChange = 0;
         state.revision++;
     }
@@ -147,9 +154,34 @@ final class MatchEngine {
 
     String statusLabel() {
         if (!state.completed) {
-            return state.inTieBreak ? "TIE-BREAK" : "IN PLAY";
+            if (state.inTieBreak) {
+                return "TIE-BREAK";
+            }
+            if (state.mode == Mode.CLASSIC || state.mode == Mode.SINGLE_SET) {
+                if (state.pointsA == state.pointsB && state.pointsA >= 3) {
+                    if (state.settings.gameScoring == GameScoring.STAR) {
+                        return state.pointsA >= 5
+                                ? "STAR POINT" : "DEUCE " + (state.pointsA - 2);
+                    }
+                    return "DEUCE";
+                }
+                if (Math.abs(state.pointsA - state.pointsB) == 1
+                        && Math.min(state.pointsA, state.pointsB) >= 3) {
+                    return "ADV " + (state.pointsA > state.pointsB ? "A" : "B");
+                }
+            }
+            return "IN PLAY";
         }
         return "DRAW".equals(state.winner) ? "ROUND DRAW" : "TEAM " + state.winner + " WINS";
+    }
+
+    boolean isStarPoint() {
+        return !state.completed
+                && !state.inTieBreak
+                && (state.mode == Mode.CLASSIC || state.mode == Mode.SINGLE_SET)
+                && state.settings.gameScoring == GameScoring.STAR
+                && state.pointsA == state.pointsB
+                && state.pointsA >= 5;
     }
 
     String detailLabel() {

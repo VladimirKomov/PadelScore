@@ -3,8 +3,8 @@
     "bundleName": "com.vekom.padelscore",
     "vendor": "vekom",
     "version": {
-      "code": 1001000,
-      "name": "1.1.0"
+      "code": 1002000,
+      "name": "1.2.0"
     }
   },
   "deviceConfig": {},

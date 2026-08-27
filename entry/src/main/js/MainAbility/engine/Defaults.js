@@ -5,12 +5,10 @@ export function defaultSettings(mode) {
             mode,
             gamesPerSet: 6,
             setsToWin: mode === 'single_set' ? 1 : 2,
-            winSetByTwo: true,
-            tieBreakEnabled: true,
-            tieBreakAt: 6,
             tieBreakTarget: 7,
-            advantageMode: 'advantage',
-            trackServe: false,
+            gameScoring: 'star',
+            setEnding: 'tie_break',
+            trackServe: true,
             startingServer: 'A'
         };
         return settings;
@@ -44,8 +42,67 @@ export function defaultSettings(mode) {
     };
     return settings;
 }
+function integer(value, fallback, minimum, maximum) {
+    return typeof value === 'number' && Number.isFinite(value)
+        ? Math.max(minimum, Math.min(maximum, Math.round(value)))
+        : fallback;
+}
+function team(value, fallback) {
+    return value === 'A' || value === 'B' ? value : fallback;
+}
+export function normalizeSettings(mode, supplied) {
+    const fallback = defaultSettings(mode);
+    if (supplied === null || typeof supplied !== 'object') {
+        return fallback;
+    }
+    const source = supplied;
+    if (mode === 'classic' || mode === 'single_set') {
+        const gameScoring = source.gameScoring === 'star' || source.gameScoring === 'advantage' ||
+            source.gameScoring === 'golden'
+            ? source.gameScoring
+            : source.advantageMode === 'golden' || source.goldenPoint === true
+                ? 'golden'
+                : 'advantage';
+        const setEnding = source.setEnding === 'tie_break' || source.setEnding === 'two_game_lead' ||
+            source.setEnding === 'first_to'
+            ? source.setEnding
+            : source.winSetByTwo === false
+                ? 'first_to'
+                : source.tieBreakEnabled === false
+                    ? 'two_game_lead'
+                    : 'tie_break';
+        return {
+            mode,
+            gamesPerSet: integer(source.gamesPerSet, fallback.gamesPerSet, 1, 12),
+            setsToWin: mode === 'single_set'
+                ? 1
+                : integer(source.setsToWin, fallback.setsToWin, 1, 3),
+            tieBreakTarget: integer(source.tieBreakTarget, fallback.tieBreakTarget, 1, 30),
+            gameScoring,
+            setEnding,
+            trackServe: typeof source.trackServe === 'boolean' ? source.trackServe : fallback.trackServe,
+            startingServer: team(source.startingServer, fallback.startingServer)
+        };
+    }
+    if (mode === 'americano') {
+        return {
+            mode,
+            totalPoints: integer(source.totalPoints, fallback.totalPoints, 1, 99),
+            serveEvery: integer(source.serveEvery, fallback.serveEvery, 1, 16),
+            trackServe: typeof source.trackServe === 'boolean' ? source.trackServe : fallback.trackServe,
+            startingServer: team(source.startingServer, fallback.startingServer)
+        };
+    }
+    return {
+        mode,
+        target: integer(source.target, fallback.target, 1, 99),
+        winByTwo: typeof source.winByTwo === 'boolean' ? source.winByTwo : fallback.winByTwo,
+        trackServe: false,
+        startingServer: team(source.startingServer, fallback.startingServer)
+    };
+}
 export function createInitialState(mode, supplied) {
-    const settings = supplied !== null && supplied !== void 0 ? supplied : defaultSettings(mode);
+    const settings = normalizeSettings(mode, supplied);
     return {
         formatVersion: SAVE_FORMAT_VERSION,
         mode,
@@ -59,6 +116,7 @@ export function createInitialState(mode, supplied) {
         tieBreakPointsA: 0,
         tieBreakPointsB: 0,
         inTieBreak: false,
+        tieBreakStartingServer: null,
         completed: false,
         winner: null,
         currentServer: settings.startingServer,

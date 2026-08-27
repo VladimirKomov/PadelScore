@@ -1,7 +1,7 @@
 import featureAbility from '@ohos.ability.featureAbility';
 import prompt from '@ohos.prompt';
 import vibrator from '@ohos.vibrator';
-import { defaultSettings } from '../../engine/Defaults';
+import { defaultSettings, normalizeSettings } from '../../engine/Defaults';
 import { MatchEngine } from '../../engine/MatchEngine';
 import { MatchRepository } from '../../persistence/MatchRepository';
 
@@ -29,6 +29,10 @@ export default {
     showMatch: false,
     showMenuView: false,
     showHistory: false,
+    showChoicePicker: false,
+    showGameChoices: false,
+    showSetChoices: false,
+    choiceTitle: '',
     historyReturnView: 'match',
     selectedMode: 'americano',
     settingsTitle: 'AMERICANO',
@@ -36,16 +40,16 @@ export default {
     showTargetSettings: true,
     showClassicSettings: false,
     showSetsSetting: false,
-    showTieAtSetting: false,
     showWinByTwoSetting: false,
     showServeSetting: true,
     target: 24,
     gamesPerSet: 6,
     setsToWin: 2,
-    tieBreakAt: 6,
     winByTwo: true,
-    goldenPoint: false,
-    tieBreakEnabled: true,
+    gameScoring: 'star',
+    gameScoringLabel: 'STAR',
+    setEnding: 'tie_break',
+    setEndingLabel: 'TB 6:6',
     serveEvery: 4,
     trackServe: true,
     startingServerA: true,
@@ -111,6 +115,7 @@ export default {
     this.showMatch = name === 'match';
     this.showMenuView = name === 'menu';
     this.showHistory = name === 'history';
+    this.showChoicePicker = name === 'choice';
     this.updateKeepScreen();
   },
 
@@ -136,6 +141,12 @@ export default {
       await vibrator.vibrate(duration);
     } catch (error) {
     }
+  },
+
+  async hapticStarPoint() {
+    await this.haptic(38);
+    await new Promise((resolve) => setTimeout(resolve, 55));
+    await this.haptic(70);
   },
 
   async persist() {
@@ -175,6 +186,13 @@ export default {
       return mode + ' · TB · S' + presentation.setsA + ':' + presentation.setsB
         + ' · G' + presentation.gamesA + ':' + presentation.gamesB;
     }
+    if ((state.mode === 'classic' || state.mode === 'single_set')
+        && presentation.status !== 'IN PLAY') {
+      const gameStatus = presentation.status === 'STAR POINT'
+        ? '★ STAR'
+        : presentation.status;
+      return mode + ' · ' + gameStatus;
+    }
     if (state.mode === 'classic') {
       return mode + ' · S' + presentation.setsA + ':' + presentation.setsB
         + ' · G' + presentation.gamesA + ':' + presentation.gamesB;
@@ -209,13 +227,15 @@ export default {
     this.completedClass = presentation.completed ? 'complete-card' : '';
     this.statusClass = presentation.completed ? 'finished-status' : '';
     this.matchInfoText = this.compactMatchInfo(state, presentation);
-    this.matchInfoClass = presentation.completed ? 'match-info-finished' : '';
+    this.matchInfoClass = presentation.completed
+      ? 'match-info-finished'
+      : presentation.status === 'STAR POINT' ? 'match-info-star' : '';
     if (presentation.completed) {
       this.statusText = presentation.winner === 'draw'
         ? this.$t('strings.roundDraw')
         : this.$t('strings.team' + presentation.winner) + this.$t('strings.teamWins');
-    } else if (presentation.tieBreak) {
-      this.statusText = this.$t('strings.tieBreak');
+    } else if (presentation.status !== 'IN PLAY') {
+      this.statusText = presentation.status;
     } else {
       this.statusText = this.$t('strings.inPlay');
     }
@@ -246,7 +266,6 @@ export default {
     const americano = this.selectedMode === 'americano';
     this.showClassicSettings = classic;
     this.showSetsSetting = this.selectedMode === 'classic';
-    this.showTieAtSetting = classic && this.tieBreakEnabled;
     this.showTargetSettings = !classic;
     this.showWinByTwoSetting = this.selectedMode === 'tie_break' ||
       this.selectedMode === 'super_tie_break' || this.selectedMode === 'race_to_n';
@@ -255,14 +274,15 @@ export default {
   },
 
   applySettings(settings) {
+    settings = normalizeSettings(settings.mode, settings);
     this.startingServerA = settings.startingServer === 'A';
     this.trackServe = settings.trackServe;
     if (settings.mode === 'classic' || settings.mode === 'single_set') {
       this.gamesPerSet = settings.gamesPerSet;
       this.setsToWin = settings.setsToWin;
-      this.tieBreakAt = settings.tieBreakAt;
-      this.tieBreakEnabled = settings.tieBreakEnabled;
-      this.goldenPoint = settings.advantageMode === 'golden';
+      this.gameScoring = settings.gameScoring;
+      this.setEnding = settings.setEnding;
+      this.updateClassicChoiceLabels();
     } else if (settings.mode === 'americano') {
       this.target = settings.totalPoints;
       this.serveEvery = settings.serveEvery;
@@ -299,12 +319,10 @@ export default {
         mode: this.selectedMode,
         gamesPerSet: this.gamesPerSet,
         setsToWin: this.selectedMode === 'single_set' ? 1 : this.setsToWin,
-        winSetByTwo: true,
-        tieBreakEnabled: this.tieBreakEnabled,
-        tieBreakAt: this.tieBreakAt,
         tieBreakTarget: 7,
-        advantageMode: this.goldenPoint ? 'golden' : 'advantage',
-        trackServe: false,
+        gameScoring: this.gameScoring,
+        setEnding: this.setEnding,
+        trackServe: this.trackServe,
         startingServer
       };
     }
@@ -355,11 +373,17 @@ export default {
   },
 
   async addPoint(team) {
+    const wasStarPoint = engine.presentation.status === 'STAR POINT';
     const result = engine.dispatch({ type: 'PointWon', team });
     if (!result.accepted) return;
     this.renderEngine();
     await this.persist();
-    await this.haptic(result.completedNow ? 120 : 35);
+    const isStarPoint = engine.presentation.status === 'STAR POINT';
+    if (isStarPoint && !wasStarPoint) {
+      await this.hapticStarPoint();
+    } else {
+      await this.haptic(result.completedNow ? 120 : 35);
+    }
     await this.updateKeepScreen();
   },
 
@@ -483,20 +507,51 @@ export default {
   preset32() { this.target = 32; },
   targetDown() { this.target = clamp(this.target - 1, 1, 99); },
   targetUp() { this.target = clamp(this.target + 1, 1, 99); },
-  gamesDown() { this.gamesPerSet = clamp(this.gamesPerSet - 1, 1, 12); },
-  gamesUp() { this.gamesPerSet = clamp(this.gamesPerSet + 1, 1, 12); },
+  gamesDown() {
+    this.gamesPerSet = clamp(this.gamesPerSet - 1, 1, 12);
+    this.updateClassicChoiceLabels();
+  },
+  gamesUp() {
+    this.gamesPerSet = clamp(this.gamesPerSet + 1, 1, 12);
+    this.updateClassicChoiceLabels();
+  },
   setsDown() { this.setsToWin = clamp(this.setsToWin - 1, 1, 3); },
   setsUp() { this.setsToWin = clamp(this.setsToWin + 1, 1, 3); },
-  tieAtDown() { this.tieBreakAt = clamp(this.tieBreakAt - 1, 1, 12); },
-  tieAtUp() { this.tieBreakAt = clamp(this.tieBreakAt + 1, 1, 12); },
   serveDown() { this.serveEvery = clamp(this.serveEvery - 1, 1, 16); },
   serveUp() { this.serveEvery = clamp(this.serveEvery + 1, 1, 16); },
 
   toggleWinByTwo(event) { this.winByTwo = checkedValue(event, this.winByTwo); },
-  toggleGolden(event) { this.goldenPoint = checkedValue(event, this.goldenPoint); },
-  toggleTieBreak(event) {
-    this.tieBreakEnabled = checkedValue(event, this.tieBreakEnabled);
-    this.updateSettingsVisibility();
+  updateClassicChoiceLabels() {
+    this.gameScoringLabel = this.gameScoring === 'star'
+      ? 'STAR'
+      : this.gameScoring === 'golden' ? 'GOLDEN' : 'ADVANTAGE';
+    this.setEndingLabel = this.setEnding === 'tie_break'
+      ? 'TB ' + this.gamesPerSet + ':' + this.gamesPerSet
+      : this.setEnding === 'two_game_lead'
+        ? '2-GAME LEAD'
+        : 'FIRST TO ' + this.gamesPerSet;
+  },
+  openGameScoring() {
+    this.choiceTitle = this.$t('strings.gameScoring');
+    this.showGameChoices = true;
+    this.showSetChoices = false;
+    this.setView('choice');
+  },
+  openSetEnding() {
+    this.choiceTitle = this.$t('strings.setEnding');
+    this.showGameChoices = false;
+    this.showSetChoices = true;
+    this.setView('choice');
+  },
+  chooseStarScoring() { this.gameScoring = 'star'; this.closeChoicePicker(); },
+  chooseAdvantageScoring() { this.gameScoring = 'advantage'; this.closeChoicePicker(); },
+  chooseGoldenScoring() { this.gameScoring = 'golden'; this.closeChoicePicker(); },
+  chooseTieBreakEnding() { this.setEnding = 'tie_break'; this.closeChoicePicker(); },
+  chooseTwoGameLead() { this.setEnding = 'two_game_lead'; this.closeChoicePicker(); },
+  chooseFirstTo() { this.setEnding = 'first_to'; this.closeChoicePicker(); },
+  closeChoicePicker() {
+    this.updateClassicChoiceLabels();
+    this.setView('settings');
   },
   toggleTrackServe(event) {
     this.trackServe = checkedValue(event, this.trackServe);

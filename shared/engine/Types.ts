@@ -8,7 +8,8 @@ export type MatchMode =
   | 'race_to_n'
   | 'americano';
 
-export type AdvantageMode = 'advantage' | 'golden';
+export type GameScoringMode = 'star' | 'advantage' | 'golden';
+export type SetEndingMode = 'tie_break' | 'two_game_lead' | 'first_to';
 
 export interface BaseSettings {
   trackServe: boolean;
@@ -19,11 +20,9 @@ export interface ClassicSettings extends BaseSettings {
   mode: 'classic' | 'single_set';
   gamesPerSet: number;
   setsToWin: number;
-  winSetByTwo: boolean;
-  tieBreakEnabled: boolean;
-  tieBreakAt: number;
   tieBreakTarget: number;
-  advantageMode: AdvantageMode;
+  gameScoring: GameScoringMode;
+  setEnding: SetEndingMode;
 }
 
 export interface TieBreakSettings extends BaseSettings {
@@ -71,6 +70,7 @@ export interface MatchState {
   tieBreakPointsA: number;
   tieBreakPointsB: number;
   inTieBreak: boolean;
+  tieBreakStartingServer: Team | null;
   completed: boolean;
   winner: Winner;
   currentServer: Team;

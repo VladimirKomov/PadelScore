@@ -1,4 +1,4 @@
-import { createInitialState } from './Defaults';
+import { createInitialState, normalizeSettings } from './Defaults';
 import type { ScoringStrategy } from './ScoringStrategy';
 import {
   AmericanoScoringStrategy,
@@ -56,6 +56,14 @@ function isValidState(value: MatchState): boolean {
   );
 }
 
+function normalizeState(value: MatchState): MatchState {
+  const state = cloneState(value);
+  state.settings = normalizeSettings(state.mode, state.settings);
+  state.tieBreakStartingServer = state.tieBreakStartingServer === 'A' ||
+    state.tieBreakStartingServer === 'B' ? state.tieBreakStartingServer : null;
+  return state;
+}
+
 export class MatchEngine {
   private stateValue: MatchState;
   private historyValue: MatchState[];
@@ -105,6 +113,13 @@ export class MatchEngine {
     if (event.type === 'ChangeServer') {
       this.historyValue.push(cloneState(this.stateValue));
       this.stateValue.currentServer = otherTeam(this.stateValue.currentServer);
+      if (this.stateValue.inTieBreak) {
+        const played = this.stateValue.tieBreakPointsA + this.stateValue.tieBreakPointsB;
+        const currentIsStarter = played % 4 === 0 || played % 4 === 3;
+        this.stateValue.tieBreakStartingServer = currentIsStarter
+          ? this.stateValue.currentServer
+          : otherTeam(this.stateValue.currentServer);
+      }
       this.stateValue.pointsSinceServerChange = 0;
       this.stateValue.revision += 1;
       return { accepted: true, reason: 'server changed', completedNow: false };
@@ -214,10 +229,10 @@ export class MatchEngine {
         };
       }
       const engine = new MatchEngine(parsed.state.mode, parsed.state.settings);
-      engine.stateValue = cloneState(parsed.state);
+      engine.stateValue = normalizeState(parsed.state);
       engine.historyValue = parsed.history
         .filter((state) => isValidState(state))
-        .map((state) => cloneState(state));
+        .map((state) => normalizeState(state));
       engine.lastAcceptedPointAt =
         typeof parsed.lastAcceptedPointAt === 'number' ? parsed.lastAcceptedPointAt : -1;
       engine.strategy = strategyFor(parsed.state.mode);

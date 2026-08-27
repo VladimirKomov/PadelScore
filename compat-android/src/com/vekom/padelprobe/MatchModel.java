@@ -29,17 +29,23 @@ final class MatchModel {
         }
     }
 
+    enum GameScoring {
+        STAR, ADVANTAGE, GOLDEN
+    }
+
+    enum SetEnding {
+        TIE_BREAK, TWO_GAME_LEAD, FIRST_TO
+    }
+
     static final class Settings {
         Mode mode;
         int target;
         int gamesPerSet;
         int setsToWin;
-        int tieBreakAt;
         int tieBreakTarget;
         boolean winByTwo;
-        boolean winSetByTwo;
-        boolean tieBreakEnabled;
-        boolean goldenPoint;
+        GameScoring gameScoring;
+        SetEnding setEnding;
         boolean trackServe;
         int serveEvery;
         Team startingServer;
@@ -52,13 +58,12 @@ final class MatchModel {
                     : mode == Mode.RACE_TO_N ? 21 : 24;
             value.gamesPerSet = 6;
             value.setsToWin = mode == Mode.SINGLE_SET ? 1 : 2;
-            value.tieBreakAt = 6;
             value.tieBreakTarget = 7;
             value.winByTwo = mode != Mode.RACE_TO_N;
-            value.winSetByTwo = true;
-            value.tieBreakEnabled = true;
-            value.goldenPoint = false;
-            value.trackServe = mode == Mode.AMERICANO;
+            value.gameScoring = GameScoring.STAR;
+            value.setEnding = SetEnding.TIE_BREAK;
+            value.trackServe = mode == Mode.AMERICANO
+                    || mode == Mode.CLASSIC || mode == Mode.SINGLE_SET;
             value.serveEvery = 4;
             value.startingServer = Team.A;
             return value;
@@ -70,12 +75,10 @@ final class MatchModel {
             value.target = target;
             value.gamesPerSet = gamesPerSet;
             value.setsToWin = setsToWin;
-            value.tieBreakAt = tieBreakAt;
             value.tieBreakTarget = tieBreakTarget;
             value.winByTwo = winByTwo;
-            value.winSetByTwo = winSetByTwo;
-            value.tieBreakEnabled = tieBreakEnabled;
-            value.goldenPoint = goldenPoint;
+            value.gameScoring = gameScoring;
+            value.setEnding = setEnding;
             value.trackServe = trackServe;
             value.serveEvery = serveEvery;
             value.startingServer = startingServer;
@@ -114,6 +117,7 @@ final class MatchModel {
         int tieBreakPointsA;
         int tieBreakPointsB;
         boolean inTieBreak;
+        Team tieBreakStartingServer;
         boolean completed;
         String winner;
         Team currentServer;
@@ -148,6 +152,7 @@ final class MatchModel {
             value.tieBreakPointsA = tieBreakPointsA;
             value.tieBreakPointsB = tieBreakPointsB;
             value.inTieBreak = inTieBreak;
+            value.tieBreakStartingServer = tieBreakStartingServer;
             value.completed = completed;
             value.winner = winner;
             value.currentServer = currentServer;

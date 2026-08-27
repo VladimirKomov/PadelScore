@@ -222,6 +222,62 @@
   height: 94px;
 }
 
+.choice-item,
+.choice-option-item {
+  width: 100%;
+  height: 94px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.choice-row,
+.choice-option {
+  width: 86%;
+  height: 86px;
+  border-radius: 43px;
+  background-color: #14231e;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding-left: 14px;
+  padding-right: 12px;
+}
+
+.choice-label {
+  width: 145px;
+  color: #eef3f0;
+  font-size: 20px;
+  font-weight: 700;
+  margin-left: 10px;
+}
+
+.choice-value {
+  width: 108px;
+  color: #41d9ff;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.choice-option-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.choice-option-label {
+  width: 230px;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 700;
+  margin-left: 14px;
+}
+
 .toggle-row {
   width: 86%;
   height: 86px;
@@ -393,6 +449,7 @@ switch {
 }
 
 .match-info-finished { color: #7cff9b; }
+.match-info-star { color: #ffcb45; }
 .finished-status { color: #7cff9b; }
 
 .footer-row {

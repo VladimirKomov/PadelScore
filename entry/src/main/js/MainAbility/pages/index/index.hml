@@ -99,31 +99,37 @@
         </div>
       </list-item>
 
-      <list-item if="{{showClassicSettings}}" class="toggle-item">
-        <div class="toggle-row">
-          <text class="setting-icon violet-two">7</text>
-          <text class="toggle-label">{{ $t('strings.enableTieBreak') }}</text>
-          <switch checked="{{tieBreakEnabled}}" onchange="toggleTieBreak"></switch>
-        </div>
-      </list-item>
-
-      <list-item if="{{showTieAtSetting}}" class="control-item">
-        <div class="number-control">
-          <text class="setting-icon violet-two">7</text>
-          <text class="control-label">{{ $t('strings.tieBreakAt') }}</text>
-          <div class="number-row">
-            <button class="round-control" onclick="tieAtDown">−</button>
-            <text class="number-value">{{tieBreakAt}}</text>
-            <button class="round-control" onclick="tieAtUp">+</button>
-          </div>
-        </div>
-      </list-item>
-
-      <list-item if="{{showClassicSettings}}" class="toggle-item">
-        <div class="toggle-row">
+      <list-item if="{{showClassicSettings}}" class="choice-item">
+        <div class="choice-row" onclick="openGameScoring">
           <text class="setting-icon amber-one">★</text>
-          <text class="toggle-label">{{ $t('strings.goldenPoint') }}</text>
-          <switch checked="{{goldenPoint}}" onchange="toggleGolden"></switch>
+          <text class="choice-label">{{ $t('strings.gameScoring') }}</text>
+          <text class="choice-value">{{gameScoringLabel}}</text>
+          <text class="chevron">›</text>
+        </div>
+      </list-item>
+
+      <list-item if="{{showClassicSettings}}" class="choice-item">
+        <div class="choice-row" onclick="openSetEnding">
+          <text class="setting-icon violet-two">S</text>
+          <text class="choice-label">{{ $t('strings.setEnding') }}</text>
+          <text class="choice-value">{{setEndingLabel}}</text>
+          <text class="chevron">›</text>
+        </div>
+      </list-item>
+
+      <list-item if="{{showClassicSettings}}" class="toggle-item">
+        <div class="toggle-row">
+          <text class="setting-icon blue-one">S</text>
+          <text class="toggle-label">{{ $t('strings.trackServe') }}</text>
+          <switch checked="{{trackServe}}" onchange="toggleTrackServe"></switch>
+        </div>
+      </list-item>
+
+      <list-item if="{{showClassicSettings}}" class="toggle-item">
+        <div class="toggle-row">
+          <text class="setting-icon orange-one icon-small">A/B</text>
+          <text class="toggle-label">{{ $t('strings.startingServer') }}</text>
+          <switch checked="{{startingServerA}}" onchange="toggleStartingServer"></switch>
         </div>
       </list-item>
 
@@ -165,6 +171,60 @@
 
       <list-item class="action-item"><button class="start-button" onclick="startSelectedMode">{{ $t('strings.start') }}</button></list-item>
       <list-item class="bottom-item"><button class="quiet-button" onclick="settingsBack">{{ $t('strings.back') }}</button></list-item>
+      <list-item class="scroll-spacer"><div></div></list-item>
+    </list>
+  </div>
+
+  <div if="{{showChoicePicker}}" class="screen">
+    <list class="scroll-list settings-list">
+      <list-item class="heading-item">
+        <div class="heading-wrap">
+          <text class="page-title settings-heading">{{choiceTitle}}</text>
+        </div>
+      </list-item>
+      <list-item if="{{showGameChoices}}" class="choice-option-item">
+        <div class="choice-option" onclick="chooseStarScoring">
+          <text class="choice-option-icon amber-one">★</text>
+          <text class="choice-option-label">{{ $t('strings.starPoint') }}</text>
+          <text class="chevron">›</text>
+        </div>
+      </list-item>
+      <list-item if="{{showGameChoices}}" class="choice-option-item">
+        <div class="choice-option" onclick="chooseAdvantageScoring">
+          <text class="choice-option-icon blue-one">A</text>
+          <text class="choice-option-label">{{ $t('strings.advantage') }}</text>
+          <text class="chevron">›</text>
+        </div>
+      </list-item>
+      <list-item if="{{showGameChoices}}" class="choice-option-item">
+        <div class="choice-option" onclick="chooseGoldenScoring">
+          <text class="choice-option-icon orange-one">1</text>
+          <text class="choice-option-label">{{ $t('strings.goldenPoint') }}</text>
+          <text class="chevron">›</text>
+        </div>
+      </list-item>
+      <list-item if="{{showSetChoices}}" class="choice-option-item">
+        <div class="choice-option" onclick="chooseTieBreakEnding">
+          <text class="choice-option-icon violet-two">7</text>
+          <text class="choice-option-label">{{ $t('strings.tieBreakEnding') }}</text>
+          <text class="chevron">›</text>
+        </div>
+      </list-item>
+      <list-item if="{{showSetChoices}}" class="choice-option-item">
+        <div class="choice-option" onclick="chooseTwoGameLead">
+          <text class="choice-option-icon blue-two">+2</text>
+          <text class="choice-option-label">{{ $t('strings.twoGameLead') }}</text>
+          <text class="chevron">›</text>
+        </div>
+      </list-item>
+      <list-item if="{{showSetChoices}}" class="choice-option-item">
+        <div class="choice-option" onclick="chooseFirstTo">
+          <text class="choice-option-icon orange-one">N</text>
+          <text class="choice-option-label">{{ $t('strings.firstTo') }} {{gamesPerSet}}</text>
+          <text class="chevron">›</text>
+        </div>
+      </list-item>
+      <list-item class="bottom-item"><button class="quiet-button" onclick="closeChoicePicker">{{ $t('strings.back') }}</button></list-item>
       <list-item class="scroll-spacer"><div></div></list-item>
     </list>
   </div>

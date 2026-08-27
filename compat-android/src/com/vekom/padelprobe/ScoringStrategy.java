@@ -1,6 +1,8 @@
 package com.vekom.padelprobe;
 
 import static com.vekom.padelprobe.MatchModel.Mode;
+import static com.vekom.padelprobe.MatchModel.GameScoring;
+import static com.vekom.padelprobe.MatchModel.SetEnding;
 import static com.vekom.padelprobe.MatchModel.Settings;
 import static com.vekom.padelprobe.MatchModel.State;
 import static com.vekom.padelprobe.MatchModel.Team;
@@ -43,7 +45,15 @@ interface ScoringStrategy {
                         settings.tieBreakTarget,
                         true);
                 if (winner != null) {
+                    if (settings.trackServe && state.tieBreakStartingServer != null) {
+                        state.currentServer = state.tieBreakStartingServer.other();
+                    }
                     awardSet(state, winner);
+                } else if (settings.trackServe) {
+                    int played = state.tieBreakPointsA + state.tieBreakPointsB;
+                    if (played == 1 || played % 2 == 1) {
+                        state.currentServer = state.currentServer.other();
+                    }
                 }
                 return;
             }
@@ -55,10 +65,14 @@ interface ScoringStrategy {
             } else {
                 state.pointsB++;
             }
-            boolean goldenDeuce = settings.goldenPoint && beforeA >= 3 && beforeB >= 3;
+            boolean tiedBeforePoint = beforeA == beforeB;
+            boolean goldenDeuce = settings.gameScoring == GameScoring.GOLDEN
+                    && tiedBeforePoint && beforeA >= 3;
+            boolean starPoint = settings.gameScoring == GameScoring.STAR
+                    && tiedBeforePoint && beforeA >= 5;
             int own = team == Team.A ? state.pointsA : state.pointsB;
             int opponent = team == Team.A ? state.pointsB : state.pointsA;
-            if (goldenDeuce || (own >= 4 && own - opponent >= 2)) {
+            if (goldenDeuce || starPoint || (own >= 4 && own - opponent >= 2)) {
                 awardGame(state, team);
             }
         }
@@ -72,18 +86,23 @@ interface ScoringStrategy {
             } else {
                 state.gamesB++;
             }
-            if (settings.tieBreakEnabled
-                    && state.gamesA == settings.tieBreakAt
-                    && state.gamesB == settings.tieBreakAt) {
+            if (settings.trackServe) {
+                state.currentServer = state.currentServer.other();
+                state.pointsSinceServerChange = 0;
+            }
+            if (settings.setEnding == SetEnding.TIE_BREAK
+                    && state.gamesA == settings.gamesPerSet
+                    && state.gamesB == settings.gamesPerSet) {
                 state.inTieBreak = true;
                 state.tieBreakPointsA = 0;
                 state.tieBreakPointsB = 0;
+                state.tieBreakStartingServer = state.currentServer;
                 return;
             }
             int own = team == Team.A ? state.gamesA : state.gamesB;
             int opponent = team == Team.A ? state.gamesB : state.gamesA;
             boolean enough = own >= settings.gamesPerSet;
-            boolean margin = !settings.winSetByTwo || own - opponent >= 2;
+            boolean margin = settings.setEnding == SetEnding.FIRST_TO || own - opponent >= 2;
             if (enough && margin) {
                 awardSet(state, team);
             }
@@ -102,6 +121,7 @@ interface ScoringStrategy {
             state.tieBreakPointsA = 0;
             state.tieBreakPointsB = 0;
             state.inTieBreak = false;
+            state.tieBreakStartingServer = null;
             int own = team == Team.A ? state.setsA : state.setsB;
             if (own >= state.settings.setsToWin) {
                 state.completed = true;

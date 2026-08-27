@@ -1,4 +1,4 @@
-import { createInitialState } from './Defaults';
+import { createInitialState, normalizeSettings } from './Defaults';
 import { AmericanoScoringStrategy, ClassicScoringStrategy, RaceToNScoringStrategy, TieBreakScoringStrategy } from './Strategies';
 import { DEFAULT_DEBOUNCE_MS, SAVE_FORMAT_VERSION, cloneState, otherTeam } from './Types';
 function strategyFor(mode) {
@@ -24,6 +24,13 @@ function isValidState(value) {
         value.pointsB >= 0 &&
         value.settings !== null &&
         typeof value.settings === 'object');
+}
+function normalizeState(value) {
+    const state = cloneState(value);
+    state.settings = normalizeSettings(state.mode, state.settings);
+    state.tieBreakStartingServer = state.tieBreakStartingServer === 'A' ||
+        state.tieBreakStartingServer === 'B' ? state.tieBreakStartingServer : null;
+    return state;
 }
 export class MatchEngine {
     constructor(mode = 'americano', settings, debounceMs = DEFAULT_DEBOUNCE_MS) {
@@ -60,6 +67,13 @@ export class MatchEngine {
         if (event.type === 'ChangeServer') {
             this.historyValue.push(cloneState(this.stateValue));
             this.stateValue.currentServer = otherTeam(this.stateValue.currentServer);
+            if (this.stateValue.inTieBreak) {
+                const played = this.stateValue.tieBreakPointsA + this.stateValue.tieBreakPointsB;
+                const currentIsStarter = played % 4 === 0 || played % 4 === 3;
+                this.stateValue.tieBreakStartingServer = currentIsStarter
+                    ? this.stateValue.currentServer
+                    : otherTeam(this.stateValue.currentServer);
+            }
             this.stateValue.pointsSinceServerChange = 0;
             this.stateValue.revision += 1;
             return { accepted: true, reason: 'server changed', completedNow: false };
@@ -158,10 +172,10 @@ export class MatchEngine {
                 };
             }
             const engine = new MatchEngine(parsed.state.mode, parsed.state.settings);
-            engine.stateValue = cloneState(parsed.state);
+            engine.stateValue = normalizeState(parsed.state);
             engine.historyValue = parsed.history
                 .filter((state) => isValidState(state))
-                .map((state) => cloneState(state));
+                .map((state) => normalizeState(state));
             engine.lastAcceptedPointAt =
                 typeof parsed.lastAcceptedPointAt === 'number' ? parsed.lastAcceptedPointAt : -1;
             engine.strategy = strategyFor(parsed.state.mode);

@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Collections;
 
 import static com.vekom.padelprobe.MatchModel.Mode;
+import static com.vekom.padelprobe.MatchModel.GameScoring;
+import static com.vekom.padelprobe.MatchModel.SetEnding;
 import static com.vekom.padelprobe.MatchModel.Settings;
 import static com.vekom.padelprobe.MatchModel.State;
 import static com.vekom.padelprobe.MatchModel.Team;
@@ -95,6 +97,19 @@ public final class MainActivity extends Activity {
                     milliseconds, VibrationEffect.DEFAULT_AMPLITUDE));
         } else {
             vibrator.vibrate(milliseconds);
+        }
+    }
+
+    private void buzzStarPoint() {
+        Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+        if (vibrator == null || !vibrator.hasVibrator()) {
+            return;
+        }
+        long[] pattern = {0, 38, 55, 70};
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1));
+        } else {
+            vibrator.vibrate(pattern, -1);
         }
     }
 
@@ -289,10 +304,11 @@ public final class MainActivity extends Activity {
             rounded(canvas, 32, top, 434, top + ROW_HEIGHT, 40, panel);
             circleButton(canvas, 76, top + 45, 28, settingIcon(index),
                     settingColor(index), Color.WHITE, settingIcon(index).length() > 1 ? 14 : 19);
-            text(canvas, label.toUpperCase(), 120, top + 55, 24,
+            text(canvas, label.toUpperCase(), 120, top + 55,
+                    label.length() > 9 ? 19 : 24,
                     Color.WHITE, Paint.Align.LEFT, true);
-            if (isNumericSetting(index)) {
-                text(canvas, value, 378, top + 56, 30,
+            if (isPickerSetting(index)) {
+                text(canvas, value, 378, top + 56, value.length() > 8 ? 18 : 24,
                         green, Paint.Align.RIGHT, true);
                 text(canvas, "›", 412, top + 59, 36,
                         muted, Paint.Align.CENTER, false);
@@ -306,17 +322,17 @@ public final class MainActivity extends Activity {
         }
 
         private void drawPicker(Canvas canvas) {
-            int[] values = pickerValues();
-            int selected = currentNumericValue();
+            String[] values = pickerLabels();
+            String selected = currentPickerValue();
             canvas.save();
             canvas.clipRect(0, NESTED_HEADER_BOTTOM, BASE, 456);
             canvas.translate(0, -scrollOffset);
             float top = NESTED_CONTENT_TOP;
-            for (int value : values) {
-                boolean active = value == selected;
+            for (String value : values) {
+                boolean active = value.equals(selected);
                 rounded(canvas, 40, top, 426, top + PICKER_HEIGHT, 38,
                         active ? green : panel);
-                text(canvas, Integer.toString(value), 86, top + 54, 34,
+                text(canvas, value, 86, top + 54, value.length() > 10 ? 24 : 30,
                         active ? background : Color.WHITE, Paint.Align.LEFT, true);
                 if (active) {
                     text(canvas, "✓", 386, top + 57, 28,
@@ -438,10 +454,10 @@ public final class MainActivity extends Activity {
 
         private String settingIcon(int index) {
             if (editing.mode == Mode.CLASSIC) {
-                return new String[]{"S", "G", "★", "+2", "7"}[index];
+                return new String[]{"S", "G", "★", "S", "S", "A/B"}[index];
             }
             if (editing.mode == Mode.SINGLE_SET) {
-                return new String[]{"G", "★", "+2", "7"}[index];
+                return new String[]{"G", "★", "S", "S", "A/B"}[index];
             }
             if (editing.mode == Mode.AMERICANO) {
                 return new String[]{"◎", "S", "↻", "A/B"}[index];
@@ -544,7 +560,8 @@ public final class MainActivity extends Activity {
             float statusWidth = paint.measureText(status);
             float x = (BASE - modeWidth - separatorWidth - statusWidth) / 2f;
             int modeColor = state.completed ? muted : green;
-            int statusColor = state.completed ? green : Color.WHITE;
+            int statusColor = state.completed ? green : engine.isStarPoint()
+                    ? teamB : Color.WHITE;
             text(canvas, mode, x, 211, size, modeColor, Paint.Align.LEFT, true);
             x += modeWidth;
             text(canvas, separator, x, 211, size, muted, Paint.Align.LEFT, true);
@@ -569,6 +586,12 @@ public final class MainActivity extends Activity {
                     && state.inTieBreak) {
                 return "TB  ·  S" + state.setsA + ":" + state.setsB
                         + "  ·  G" + state.gamesA + ":" + state.gamesB;
+            }
+            if (state.mode == Mode.CLASSIC || state.mode == Mode.SINGLE_SET) {
+                String gameStatus = engine.statusLabel();
+                if (!"IN PLAY".equals(gameStatus)) {
+                    return "STAR POINT".equals(gameStatus) ? "★ STAR" : gameStatus;
+                }
             }
             if (state.mode == Mode.CLASSIC) {
                 return "S" + state.setsA + ":" + state.setsB
@@ -856,7 +879,7 @@ public final class MainActivity extends Activity {
             float rowTop = firstRow + index * ROW_STEP;
             if (index >= 0 && index < count
                     && inside(x, contentY, 32, rowTop, 434, rowTop + ROW_HEIGHT)) {
-                if (isNumericSetting(index)) {
+                if (isPickerSetting(index)) {
                     settingsScrollRestore = scrollOffset;
                     pickerSettingIndex = index;
                     showScreen(Screen.PICKER);
@@ -887,10 +910,10 @@ public final class MainActivity extends Activity {
             float contentY = y + scrollOffset;
             int index = (int) ((contentY - NESTED_CONTENT_TOP) / PICKER_STEP);
             float rowTop = NESTED_CONTENT_TOP + index * PICKER_STEP;
-            int[] values = pickerValues();
+            String[] values = pickerLabels();
             if (index >= 0 && index < values.length
                     && inside(x, contentY, 40, rowTop, 426, rowTop + PICKER_HEIGHT)) {
-                setNumericSettingValue(values[index]);
+                setPickerValue(values[index]);
                 buzz(18);
                 returnToSettings();
             }
@@ -939,12 +962,17 @@ public final class MainActivity extends Activity {
         }
 
         private void addPoint(Team team) {
+            boolean wasStarPoint = engine.isStarPoint();
             MatchEngine.Result result = engine.point(team);
             if (result.accepted) {
                 store.save(engine);
                 scoreFlashTeam = team;
                 scoreFlashUntil = SystemClock.uptimeMillis() + SCORE_FLASH_MILLISECONDS;
-                buzz(result.completedNow ? 120 : 35);
+                if (!wasStarPoint && engine.isStarPoint()) {
+                    buzzStarPoint();
+                } else {
+                    buzz(result.completedNow ? 120 : 35);
+                }
                 keepAwake(true);
             }
         }
@@ -1039,10 +1067,10 @@ public final class MainActivity extends Activity {
 
         private int settingsRowCount() {
             if (editing.mode == Mode.CLASSIC) {
-                return 5;
+                return 6;
             }
             if (editing.mode == Mode.SINGLE_SET) {
-                return 4;
+                return 5;
             }
             if (editing.mode == Mode.AMERICANO) {
                 return 4;
@@ -1052,12 +1080,12 @@ public final class MainActivity extends Activity {
 
         private String settingLabel(int index) {
             if (editing.mode == Mode.CLASSIC) {
-                return new String[]{"Sets", "Games", "Golden point",
-                        "Win by 2", "Tie-break"}[index];
+                return new String[]{"Sets", "Games", "Game scoring", "Set ending",
+                        "Track serve", "First server"}[index];
             }
             if (editing.mode == Mode.SINGLE_SET) {
-                return new String[]{"Games", "Golden point", "Win by 2",
-                        "Tie-break"}[index];
+                return new String[]{"Games", "Game scoring", "Set ending",
+                        "Track serve", "First server"}[index];
             }
             if (editing.mode == Mode.AMERICANO) {
                 return new String[]{"Points", "Track serve", "Serve every",
@@ -1070,15 +1098,17 @@ public final class MainActivity extends Activity {
             if (editing.mode == Mode.CLASSIC) {
                 if (index == 0) return Integer.toString(editing.setsToWin);
                 if (index == 1) return Integer.toString(editing.gamesPerSet);
-                if (index == 2) return yesNo(editing.goldenPoint);
-                if (index == 3) return yesNo(editing.winSetByTwo);
-                return yesNo(editing.tieBreakEnabled);
+                if (index == 2) return gameScoringLabel(editing.gameScoring);
+                if (index == 3) return setEndingLabel(editing.setEnding);
+                if (index == 4) return yesNo(editing.trackServe);
+                return editing.startingServer.name();
             }
             if (editing.mode == Mode.SINGLE_SET) {
                 if (index == 0) return Integer.toString(editing.gamesPerSet);
-                if (index == 1) return yesNo(editing.goldenPoint);
-                if (index == 2) return yesNo(editing.winSetByTwo);
-                return yesNo(editing.tieBreakEnabled);
+                if (index == 1) return gameScoringLabel(editing.gameScoring);
+                if (index == 2) return setEndingLabel(editing.setEnding);
+                if (index == 3) return yesNo(editing.trackServe);
+                return editing.startingServer.name();
             }
             if (editing.mode == Mode.AMERICANO) {
                 if (index == 0) return Integer.toString(editing.target);
@@ -1098,7 +1128,18 @@ public final class MainActivity extends Activity {
             return index == 0;
         }
 
-        private int[] pickerValues() {
+        private boolean isPickerSetting(int index) {
+            return isNumericSetting(index)
+                    || (editing.mode == Mode.CLASSIC && (index == 2 || index == 3))
+                    || (editing.mode == Mode.SINGLE_SET && (index == 1 || index == 2));
+        }
+
+        private boolean isChoiceSetting(int index) {
+            return (editing.mode == Mode.CLASSIC && (index == 2 || index == 3))
+                    || (editing.mode == Mode.SINGLE_SET && (index == 1 || index == 2));
+        }
+
+        private int[] numericPickerValues() {
             if (editing.mode == Mode.CLASSIC && pickerSettingIndex == 0) {
                 return new int[]{1, 2, 3};
             }
@@ -1112,6 +1153,23 @@ public final class MainActivity extends Activity {
             return new int[]{7, 10, 15, 21, 24, 32};
         }
 
+        private String[] pickerLabels() {
+            if (isChoiceSetting(pickerSettingIndex)) {
+                boolean gameScoring = (editing.mode == Mode.CLASSIC && pickerSettingIndex == 2)
+                        || (editing.mode == Mode.SINGLE_SET && pickerSettingIndex == 1);
+                return gameScoring
+                        ? new String[]{"STAR", "ADVANTAGE", "GOLDEN"}
+                        : new String[]{"TB " + editing.gamesPerSet + ":" + editing.gamesPerSet,
+                        "2-GAME LEAD", "FIRST TO " + editing.gamesPerSet};
+            }
+            int[] numeric = numericPickerValues();
+            String[] labels = new String[numeric.length];
+            for (int i = 0; i < numeric.length; i++) {
+                labels[i] = Integer.toString(numeric[i]);
+            }
+            return labels;
+        }
+
         private int currentNumericValue() {
             if (editing.mode == Mode.CLASSIC) {
                 return pickerSettingIndex == 0 ? editing.setsToWin : editing.gamesPerSet;
@@ -1123,6 +1181,48 @@ public final class MainActivity extends Activity {
                 return editing.serveEvery;
             }
             return editing.target;
+        }
+
+        private String currentPickerValue() {
+            if (isChoiceSetting(pickerSettingIndex)) {
+                boolean gameScoring = (editing.mode == Mode.CLASSIC && pickerSettingIndex == 2)
+                        || (editing.mode == Mode.SINGLE_SET && pickerSettingIndex == 1);
+                return gameScoring
+                        ? gameScoringLabel(editing.gameScoring)
+                        : setEndingLabel(editing.setEnding);
+            }
+            return Integer.toString(currentNumericValue());
+        }
+
+        private void setPickerValue(String value) {
+            if (!isChoiceSetting(pickerSettingIndex)) {
+                setNumericSettingValue(Integer.parseInt(value));
+                return;
+            }
+            boolean gameScoring = (editing.mode == Mode.CLASSIC && pickerSettingIndex == 2)
+                    || (editing.mode == Mode.SINGLE_SET && pickerSettingIndex == 1);
+            if (gameScoring) {
+                editing.gameScoring = "STAR".equals(value) ? GameScoring.STAR
+                        : "GOLDEN".equals(value) ? GameScoring.GOLDEN
+                        : GameScoring.ADVANTAGE;
+            } else {
+                editing.setEnding = value.startsWith("TB ") ? SetEnding.TIE_BREAK
+                        : value.startsWith("FIRST") ? SetEnding.FIRST_TO
+                        : SetEnding.TWO_GAME_LEAD;
+            }
+        }
+
+        private String gameScoringLabel(GameScoring value) {
+            return value == GameScoring.STAR ? "STAR"
+                    : value == GameScoring.GOLDEN ? "GOLDEN" : "ADVANTAGE";
+        }
+
+        private String setEndingLabel(SetEnding value) {
+            if (value == SetEnding.TIE_BREAK) {
+                return "TB " + editing.gamesPerSet + ":" + editing.gamesPerSet;
+            }
+            return value == SetEnding.FIRST_TO
+                    ? "FIRST TO " + editing.gamesPerSet : "2-GAME LEAD";
         }
 
         private void setNumericSettingValue(int value) {
@@ -1149,13 +1249,11 @@ public final class MainActivity extends Activity {
         private void adjustSetting(int index, int direction) {
             if (!isNumericSetting(index)) {
                 if (editing.mode == Mode.CLASSIC) {
-                    if (index == 2) editing.goldenPoint = !editing.goldenPoint;
-                    else if (index == 3) editing.winSetByTwo = !editing.winSetByTwo;
-                    else editing.tieBreakEnabled = !editing.tieBreakEnabled;
+                    if (index == 4) editing.trackServe = !editing.trackServe;
+                    else if (index == 5) editing.startingServer = editing.startingServer.other();
                 } else if (editing.mode == Mode.SINGLE_SET) {
-                    if (index == 1) editing.goldenPoint = !editing.goldenPoint;
-                    else if (index == 2) editing.winSetByTwo = !editing.winSetByTwo;
-                    else editing.tieBreakEnabled = !editing.tieBreakEnabled;
+                    if (index == 3) editing.trackServe = !editing.trackServe;
+                    else if (index == 4) editing.startingServer = editing.startingServer.other();
                 } else if (editing.mode == Mode.AMERICANO) {
                     if (index == 1) editing.trackServe = !editing.trackServe;
                     else editing.startingServer = editing.startingServer.other();

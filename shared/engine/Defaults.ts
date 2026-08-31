@@ -73,8 +73,8 @@ export function normalizeSettings(mode: MatchMode, supplied?: unknown): ModeSett
   const source = supplied as UnknownSettings;
   if (mode === 'classic' || mode === 'single_set') {
     const defaults = fallback as ClassicSettings;
-    const gameScoring = source.gameScoring === 'star' || source.gameScoring === 'advantage' ||
-      source.gameScoring === 'golden'
+    const gameScoring = source.gameScoring === 'star' || source.gameScoring === 'silver' ||
+      source.gameScoring === 'advantage' || source.gameScoring === 'golden'
       ? source.gameScoring
       : source.advantageMode === 'golden' || source.goldenPoint === true
         ? 'golden'

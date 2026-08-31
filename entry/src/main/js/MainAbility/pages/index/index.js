@@ -8,8 +8,37 @@ import { MatchRepository } from '../../persistence/MatchRepository';
 let engine = new MatchEngine('americano');
 let repository = null;
 
+const AMERICANO_TARGETS = [16, 21, 24, 32];
+
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+function closestAmericanoTarget(value) {
+  let closest = AMERICANO_TARGETS[0];
+  let distance = Math.abs(value - closest);
+  for (let index = 1; index < AMERICANO_TARGETS.length; index += 1) {
+    const candidate = AMERICANO_TARGETS[index];
+    const candidateDistance = Math.abs(value - candidate);
+    if (candidateDistance < distance) {
+      closest = candidate;
+      distance = candidateDistance;
+    }
+  }
+  return closest;
+}
+
+function nextAmericanoTarget(value, direction) {
+  if (direction > 0) {
+    for (let index = 0; index < AMERICANO_TARGETS.length; index += 1) {
+      if (AMERICANO_TARGETS[index] > value) return AMERICANO_TARGETS[index];
+    }
+    return AMERICANO_TARGETS[0];
+  }
+  for (let index = AMERICANO_TARGETS.length - 1; index >= 0; index -= 1) {
+    if (AMERICANO_TARGETS[index] < value) return AMERICANO_TARGETS[index];
+  }
+  return AMERICANO_TARGETS[AMERICANO_TARGETS.length - 1];
 }
 
 function checkedValue(event, previous) {
@@ -143,7 +172,7 @@ export default {
     }
   },
 
-  async hapticStarPoint() {
+  async hapticDecidingPoint() {
     await this.haptic(38);
     await new Promise((resolve) => setTimeout(resolve, 55));
     await this.haptic(70);
@@ -188,9 +217,12 @@ export default {
     }
     if ((state.mode === 'classic' || state.mode === 'single_set')
         && presentation.status !== 'IN PLAY') {
-      const gameStatus = presentation.status === 'STAR POINT'
-        ? '★ STAR'
-        : presentation.status;
+      let gameStatus = presentation.status;
+      if (presentation.status === 'STAR POINT') {
+        gameStatus = '★ STAR';
+      } else if (presentation.status === 'SILVER POINT') {
+        gameStatus = '◇ SILVER';
+      }
       return mode + ' · ' + gameStatus;
     }
     if (state.mode === 'classic') {
@@ -229,7 +261,8 @@ export default {
     this.matchInfoText = this.compactMatchInfo(state, presentation);
     this.matchInfoClass = presentation.completed
       ? 'match-info-finished'
-      : presentation.status === 'STAR POINT' ? 'match-info-star' : '';
+      : presentation.status === 'STAR POINT' || presentation.status === 'SILVER POINT'
+        ? 'match-info-star' : '';
     if (presentation.completed) {
       this.statusText = presentation.winner === 'draw'
         ? this.$t('strings.roundDraw')
@@ -284,7 +317,7 @@ export default {
       this.setEnding = settings.setEnding;
       this.updateClassicChoiceLabels();
     } else if (settings.mode === 'americano') {
-      this.target = settings.totalPoints;
+      this.target = closestAmericanoTarget(settings.totalPoints);
       this.serveEvery = settings.serveEvery;
     } else {
       this.target = settings.target;
@@ -373,14 +406,16 @@ export default {
   },
 
   async addPoint(team) {
-    const wasStarPoint = engine.presentation.status === 'STAR POINT';
+    const wasDecidingPoint = engine.presentation.status === 'STAR POINT' ||
+      engine.presentation.status === 'SILVER POINT';
     const result = engine.dispatch({ type: 'PointWon', team });
     if (!result.accepted) return;
     this.renderEngine();
     await this.persist();
-    const isStarPoint = engine.presentation.status === 'STAR POINT';
-    if (isStarPoint && !wasStarPoint) {
-      await this.hapticStarPoint();
+    const isDecidingPoint = engine.presentation.status === 'STAR POINT' ||
+      engine.presentation.status === 'SILVER POINT';
+    if (isDecidingPoint && !wasDecidingPoint) {
+      await this.hapticDecidingPoint();
     } else {
       await this.haptic(result.completedNow ? 120 : 35);
     }
@@ -505,8 +540,14 @@ export default {
   preset24() { this.target = 24; },
   preset28() { this.target = 28; },
   preset32() { this.target = 32; },
-  targetDown() { this.target = clamp(this.target - 1, 1, 99); },
-  targetUp() { this.target = clamp(this.target + 1, 1, 99); },
+  targetDown() {
+    this.target = this.selectedMode === 'americano'
+      ? nextAmericanoTarget(this.target, -1) : clamp(this.target - 1, 1, 99);
+  },
+  targetUp() {
+    this.target = this.selectedMode === 'americano'
+      ? nextAmericanoTarget(this.target, 1) : clamp(this.target + 1, 1, 99);
+  },
   gamesDown() {
     this.gamesPerSet = clamp(this.gamesPerSet - 1, 1, 12);
     this.updateClassicChoiceLabels();
@@ -524,6 +565,7 @@ export default {
   updateClassicChoiceLabels() {
     this.gameScoringLabel = this.gameScoring === 'star'
       ? 'STAR'
+      : this.gameScoring === 'silver' ? 'SILVER'
       : this.gameScoring === 'golden' ? 'GOLDEN' : 'ADVANTAGE';
     this.setEndingLabel = this.setEnding === 'tie_break'
       ? 'TB ' + this.gamesPerSet + ':' + this.gamesPerSet
@@ -544,8 +586,9 @@ export default {
     this.setView('choice');
   },
   chooseStarScoring() { this.gameScoring = 'star'; this.closeChoicePicker(); },
-  chooseAdvantageScoring() { this.gameScoring = 'advantage'; this.closeChoicePicker(); },
+  chooseSilverScoring() { this.gameScoring = 'silver'; this.closeChoicePicker(); },
   chooseGoldenScoring() { this.gameScoring = 'golden'; this.closeChoicePicker(); },
+  chooseAdvantageScoring() { this.gameScoring = 'advantage'; this.closeChoicePicker(); },
   chooseTieBreakEnding() { this.setEnding = 'tie_break'; this.closeChoicePicker(); },
   chooseTwoGameLead() { this.setEnding = 'two_game_lead'; this.closeChoicePicker(); },
   chooseFirstTo() { this.setEnding = 'first_to'; this.closeChoicePicker(); },

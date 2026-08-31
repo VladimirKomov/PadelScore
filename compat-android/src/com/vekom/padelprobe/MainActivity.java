@@ -100,7 +100,7 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private void buzzStarPoint() {
+    private void buzzDecidingPoint() {
         Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
         if (vibrator == null || !vibrator.hasVibrator()) {
             return;
@@ -560,7 +560,7 @@ public final class MainActivity extends Activity {
             float statusWidth = paint.measureText(status);
             float x = (BASE - modeWidth - separatorWidth - statusWidth) / 2f;
             int modeColor = state.completed ? muted : green;
-            int statusColor = state.completed ? green : engine.isStarPoint()
+            int statusColor = state.completed ? green : engine.isDecidingPoint()
                     ? teamB : Color.WHITE;
             text(canvas, mode, x, 211, size, modeColor, Paint.Align.LEFT, true);
             x += modeWidth;
@@ -590,7 +590,9 @@ public final class MainActivity extends Activity {
             if (state.mode == Mode.CLASSIC || state.mode == Mode.SINGLE_SET) {
                 String gameStatus = engine.statusLabel();
                 if (!"IN PLAY".equals(gameStatus)) {
-                    return "STAR POINT".equals(gameStatus) ? "★ STAR" : gameStatus;
+                    if ("STAR POINT".equals(gameStatus)) return "★ STAR";
+                    if ("SILVER POINT".equals(gameStatus)) return "◇ SILVER";
+                    return gameStatus;
                 }
             }
             if (state.mode == Mode.CLASSIC) {
@@ -860,6 +862,9 @@ public final class MainActivity extends Activity {
                 return false;
             }
             editing = store.loadLastSettings(mode);
+            if (mode == Mode.AMERICANO) {
+                editing.target = normalizeAmericanoTarget(editing.target);
+            }
             showScreen(Screen.SETTINGS);
             return true;
         }
@@ -962,14 +967,14 @@ public final class MainActivity extends Activity {
         }
 
         private void addPoint(Team team) {
-            boolean wasStarPoint = engine.isStarPoint();
+            boolean wasDecidingPoint = engine.isDecidingPoint();
             MatchEngine.Result result = engine.point(team);
             if (result.accepted) {
                 store.save(engine);
                 scoreFlashTeam = team;
                 scoreFlashUntil = SystemClock.uptimeMillis() + SCORE_FLASH_MILLISECONDS;
-                if (!wasStarPoint && engine.isStarPoint()) {
-                    buzzStarPoint();
+                if (!wasDecidingPoint && engine.isDecidingPoint()) {
+                    buzzDecidingPoint();
                 } else {
                     buzz(result.completedNow ? 120 : 35);
                 }
@@ -1147,6 +1152,9 @@ public final class MainActivity extends Activity {
                     || (editing.mode == Mode.SINGLE_SET && pickerSettingIndex == 0)) {
                 return range(1, 12);
             }
+            if (editing.mode == Mode.AMERICANO && pickerSettingIndex == 0) {
+                return americanoTargetPresets();
+            }
             if (editing.mode == Mode.AMERICANO && pickerSettingIndex == 2) {
                 return range(1, 16);
             }
@@ -1158,7 +1166,8 @@ public final class MainActivity extends Activity {
                 boolean gameScoring = (editing.mode == Mode.CLASSIC && pickerSettingIndex == 2)
                         || (editing.mode == Mode.SINGLE_SET && pickerSettingIndex == 1);
                 return gameScoring
-                        ? new String[]{"STAR", "ADVANTAGE", "GOLDEN"}
+                        ? new String[]{"STAR · 2 ADV", "SILVER · 1 ADV",
+                        "GOLDEN · 0 ADV", "ADV · UNLIMITED"}
                         : new String[]{"TB " + editing.gamesPerSet + ":" + editing.gamesPerSet,
                         "2-GAME LEAD", "FIRST TO " + editing.gamesPerSet};
             }
@@ -1188,7 +1197,7 @@ public final class MainActivity extends Activity {
                 boolean gameScoring = (editing.mode == Mode.CLASSIC && pickerSettingIndex == 2)
                         || (editing.mode == Mode.SINGLE_SET && pickerSettingIndex == 1);
                 return gameScoring
-                        ? gameScoringLabel(editing.gameScoring)
+                        ? gameScoringPickerLabel(editing.gameScoring)
                         : setEndingLabel(editing.setEnding);
             }
             return Integer.toString(currentNumericValue());
@@ -1202,8 +1211,9 @@ public final class MainActivity extends Activity {
             boolean gameScoring = (editing.mode == Mode.CLASSIC && pickerSettingIndex == 2)
                     || (editing.mode == Mode.SINGLE_SET && pickerSettingIndex == 1);
             if (gameScoring) {
-                editing.gameScoring = "STAR".equals(value) ? GameScoring.STAR
-                        : "GOLDEN".equals(value) ? GameScoring.GOLDEN
+                editing.gameScoring = value.startsWith("STAR") ? GameScoring.STAR
+                        : value.startsWith("SILVER") ? GameScoring.SILVER
+                        : value.startsWith("GOLDEN") ? GameScoring.GOLDEN
                         : GameScoring.ADVANTAGE;
             } else {
                 editing.setEnding = value.startsWith("TB ") ? SetEnding.TIE_BREAK
@@ -1214,7 +1224,15 @@ public final class MainActivity extends Activity {
 
         private String gameScoringLabel(GameScoring value) {
             return value == GameScoring.STAR ? "STAR"
+                    : value == GameScoring.SILVER ? "SILVER"
                     : value == GameScoring.GOLDEN ? "GOLDEN" : "ADVANTAGE";
+        }
+
+        private String gameScoringPickerLabel(GameScoring value) {
+            return value == GameScoring.STAR ? "STAR · 2 ADV"
+                    : value == GameScoring.SILVER ? "SILVER · 1 ADV"
+                    : value == GameScoring.GOLDEN ? "GOLDEN · 0 ADV"
+                    : "ADV · UNLIMITED";
         }
 
         private String setEndingLabel(SetEnding value) {
@@ -1280,7 +1298,9 @@ public final class MainActivity extends Activity {
         }
 
         private int nextPreset(int current, int direction) {
-            int[] presets = {7, 10, 15, 21, 24, 32};
+            int[] presets = editing.mode == Mode.AMERICANO
+                    ? americanoTargetPresets()
+                    : new int[]{7, 10, 15, 21, 24, 32};
             if (direction > 0) {
                 for (int preset : presets) {
                     if (preset > current) return preset;
@@ -1291,6 +1311,24 @@ public final class MainActivity extends Activity {
                 if (presets[i] < current) return presets[i];
             }
             return presets[presets.length - 1];
+        }
+
+        private int[] americanoTargetPresets() {
+            return new int[]{16, 21, 24, 32};
+        }
+
+        private int normalizeAmericanoTarget(int value) {
+            int[] presets = americanoTargetPresets();
+            int closest = presets[0];
+            int distance = Math.abs(value - closest);
+            for (int preset : presets) {
+                int candidateDistance = Math.abs(value - preset);
+                if (candidateDistance < distance) {
+                    closest = preset;
+                    distance = candidateDistance;
+                }
+            }
+            return closest;
         }
 
         private boolean hasSavedMatch() {

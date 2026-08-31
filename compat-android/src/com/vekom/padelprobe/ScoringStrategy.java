@@ -68,11 +68,14 @@ interface ScoringStrategy {
             boolean tiedBeforePoint = beforeA == beforeB;
             boolean goldenDeuce = settings.gameScoring == GameScoring.GOLDEN
                     && tiedBeforePoint && beforeA >= 3;
+            boolean silverPoint = settings.gameScoring == GameScoring.SILVER
+                    && tiedBeforePoint && beforeA >= 4;
             boolean starPoint = settings.gameScoring == GameScoring.STAR
                     && tiedBeforePoint && beforeA >= 5;
             int own = team == Team.A ? state.pointsA : state.pointsB;
             int opponent = team == Team.A ? state.pointsB : state.pointsA;
-            if (goldenDeuce || starPoint || (own >= 4 && own - opponent >= 2)) {
+            if (goldenDeuce || silverPoint || starPoint
+                    || (own >= 4 && own - opponent >= 2)) {
                 awardGame(state, team);
             }
         }

@@ -24,7 +24,7 @@ PadelScore помогает вести счёт, отслеживать пода
 ## Возможности
 
 - Classic Match и Single Set;
-- три варианта розыгрыша гейма: Star Point, Advantage и Golden Point;
+- четыре варианта розыгрыша гейма: Star, Silver, Advantage и Golden Point;
 - понятный выбор окончания сета: тай-брейк, перевес в два гейма или первый до цели;
 - Tie-break до 7 и Super Tie-break до 10;
 - Race to N с настраиваемой целью;

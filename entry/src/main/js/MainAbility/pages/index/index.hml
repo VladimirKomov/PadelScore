@@ -190,16 +190,23 @@
         </div>
       </list-item>
       <list-item if="{{showGameChoices}}" class="choice-option-item">
-        <div class="choice-option" onclick="chooseAdvantageScoring">
-          <text class="choice-option-icon blue-one">A</text>
-          <text class="choice-option-label">{{ $t('strings.advantage') }}</text>
+        <div class="choice-option" onclick="chooseSilverScoring">
+          <text class="choice-option-icon blue-two">S</text>
+          <text class="choice-option-label">{{ $t('strings.silverPoint') }}</text>
           <text class="chevron">›</text>
         </div>
       </list-item>
       <list-item if="{{showGameChoices}}" class="choice-option-item">
         <div class="choice-option" onclick="chooseGoldenScoring">
-          <text class="choice-option-icon orange-one">1</text>
+          <text class="choice-option-icon orange-one">0</text>
           <text class="choice-option-label">{{ $t('strings.goldenPoint') }}</text>
+          <text class="chevron">›</text>
+        </div>
+      </list-item>
+      <list-item if="{{showGameChoices}}" class="choice-option-item">
+        <div class="choice-option" onclick="chooseAdvantageScoring">
+          <text class="choice-option-icon violet-one">∞</text>
+          <text class="choice-option-label">{{ $t('strings.advantage') }}</text>
           <text class="chevron">›</text>
         </div>
       </list-item>

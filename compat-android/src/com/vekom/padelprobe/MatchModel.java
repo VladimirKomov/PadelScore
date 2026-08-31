@@ -30,7 +30,7 @@ final class MatchModel {
     }
 
     enum GameScoring {
-        STAR, ADVANTAGE, GOLDEN
+        STAR, SILVER, ADVANTAGE, GOLDEN
     }
 
     enum SetEnding {

@@ -51,6 +51,9 @@ function classicGameStatus(state: MatchState, settings: ClassicSettings): string
     if (settings.gameScoring === 'star') {
       return state.pointsA >= 5 ? 'STAR POINT' : `DEUCE ${state.pointsA - 2}`;
     }
+    if (settings.gameScoring === 'silver') {
+      return state.pointsA >= 4 ? 'SILVER POINT' : 'DEUCE 1';
+    }
     return 'DEUCE';
   }
   if (Math.abs(state.pointsA - state.pointsB) === 1 && Math.min(state.pointsA, state.pointsB) >= 3) {
@@ -128,11 +131,14 @@ export class ClassicScoringStrategy implements ScoringStrategy {
     const tiedBeforePoint = beforeA === beforeB;
     const goldenDeuce =
       settings.gameScoring === 'golden' && tiedBeforePoint && beforeA >= 3;
+    const silverPoint =
+      settings.gameScoring === 'silver' && tiedBeforePoint && beforeA >= 4;
     const starPoint =
       settings.gameScoring === 'star' && tiedBeforePoint && beforeA >= 5;
     const own = team === 'A' ? state.pointsA : state.pointsB;
     const opponent = team === 'A' ? state.pointsB : state.pointsA;
-    const gameWon = goldenDeuce || starPoint || (own >= 4 && own - opponent >= 2);
+    const gameWon = goldenDeuce || silverPoint || starPoint ||
+      (own >= 4 && own - opponent >= 2);
     if (gameWon) {
       this.awardGame(state, team, settings);
     }

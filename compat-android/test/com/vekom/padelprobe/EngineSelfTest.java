@@ -15,6 +15,7 @@ public final class EngineSelfTest {
         classicGame();
         classicAdvantageAndUndo();
         starPoint();
+        silverPoint();
         classicTieBreak();
         classicServeRotationAndUndo();
         classicTieBreakServeRotation();
@@ -79,10 +80,26 @@ public final class EngineSelfTest {
         eq("DEUCE 2", engine.statusLabel(), "second deuce is identified");
         point(engine, Team.B);
         point(engine, Team.A);
-        yes(engine.isStarPoint(), "third deuce becomes Star Point");
+        yes(engine.isDecidingPoint(), "third deuce becomes Star Point");
         eq("STAR POINT", engine.statusLabel(), "Star Point is visible");
         point(engine, Team.B);
         eq(1, engine.state().gamesB, "Star Point winner receives the game");
+    }
+
+    private static void silverPoint() {
+        Settings settings = Settings.defaults(Mode.CLASSIC);
+        settings.gameScoring = GameScoring.SILVER;
+        MatchEngine engine = new MatchEngine(Mode.CLASSIC, settings);
+        points(engine, Team.A, 3);
+        points(engine, Team.B, 3);
+        eq("DEUCE 1", engine.statusLabel(), "Silver starts with ordinary deuce");
+        point(engine, Team.A);
+        eq("ADV A", engine.statusLabel(), "Silver allows one advantage");
+        point(engine, Team.B);
+        yes(engine.isDecidingPoint(), "second deuce becomes Silver Point");
+        eq("SILVER POINT", engine.statusLabel(), "Silver Point is visible");
+        point(engine, Team.A);
+        eq(1, engine.state().gamesA, "Silver Point winner receives the game");
     }
 
     private static void classicTieBreak() {

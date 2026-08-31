@@ -163,6 +163,10 @@ final class MatchEngine {
                         return state.pointsA >= 5
                                 ? "STAR POINT" : "DEUCE " + (state.pointsA - 2);
                     }
+                    if (state.settings.gameScoring == GameScoring.SILVER) {
+                        return state.pointsA >= 4
+                                ? "SILVER POINT" : "DEUCE 1";
+                    }
                     return "DEUCE";
                 }
                 if (Math.abs(state.pointsA - state.pointsB) == 1
@@ -175,13 +179,15 @@ final class MatchEngine {
         return "DRAW".equals(state.winner) ? "ROUND DRAW" : "TEAM " + state.winner + " WINS";
     }
 
-    boolean isStarPoint() {
-        return !state.completed
-                && !state.inTieBreak
-                && (state.mode == Mode.CLASSIC || state.mode == Mode.SINGLE_SET)
-                && state.settings.gameScoring == GameScoring.STAR
-                && state.pointsA == state.pointsB
-                && state.pointsA >= 5;
+    boolean isDecidingPoint() {
+        if (state.completed
+                || state.inTieBreak
+                || (state.mode != Mode.CLASSIC && state.mode != Mode.SINGLE_SET)
+                || state.pointsA != state.pointsB) {
+            return false;
+        }
+        return (state.settings.gameScoring == GameScoring.STAR && state.pointsA >= 5)
+                || (state.settings.gameScoring == GameScoring.SILVER && state.pointsA >= 4);
     }
 
     String detailLabel() {

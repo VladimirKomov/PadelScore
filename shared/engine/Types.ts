@@ -8,7 +8,7 @@ export type MatchMode =
   | 'race_to_n'
   | 'americano';
 
-export type GameScoringMode = 'star' | 'advantage' | 'golden';
+export type GameScoringMode = 'star' | 'silver' | 'advantage' | 'golden';
 export type SetEndingMode = 'tie_break' | 'two_game_lead' | 'first_to';
 
 export interface BaseSettings {

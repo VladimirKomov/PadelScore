@@ -57,8 +57,8 @@ export function normalizeSettings(mode, supplied) {
     }
     const source = supplied;
     if (mode === 'classic' || mode === 'single_set') {
-        const gameScoring = source.gameScoring === 'star' || source.gameScoring === 'advantage' ||
-            source.gameScoring === 'golden'
+        const gameScoring = source.gameScoring === 'star' || source.gameScoring === 'silver' ||
+            source.gameScoring === 'advantage' || source.gameScoring === 'golden'
             ? source.gameScoring
             : source.advantageMode === 'golden' || source.goldenPoint === true
                 ? 'golden'

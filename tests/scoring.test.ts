@@ -113,6 +113,23 @@ test('Classic: Star Point follows two advantages and then decides the game', () 
   assert.equal(engine.state.gamesB, 1);
 });
 
+test('Classic: Silver Point follows one advantage and then decides the game', () => {
+  const settings = classicSettings({ gameScoring: 'silver' });
+  const engine = new MatchEngine('classic', settings);
+  const clock = new TestClock();
+  add(engine, 'A', 3, clock);
+  add(engine, 'B', 3, clock);
+  assert.equal(engine.presentation.status, 'DEUCE 1');
+  add(engine, 'A', 1, clock);
+  assert.equal(engine.presentation.status, 'ADV A');
+  add(engine, 'B', 1, clock);
+  assert.equal(engine.presentation.status, 'SILVER POINT');
+  add(engine, 'A', 1, clock);
+  assert.equal(engine.state.gamesA, 1);
+  assert.equal(engine.state.pointsA, 0);
+  assert.equal(engine.state.pointsB, 0);
+});
+
 test('Classic: Golden Point ends the game immediately after first deuce', () => {
   const settings = classicSettings({ gameScoring: 'golden' });
   const engine = new MatchEngine('classic', settings);
